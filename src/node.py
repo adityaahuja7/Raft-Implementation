@@ -20,7 +20,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # DEVELOPMENT VARIABLES
 ID = int(input("ENTER ID:"))
-ALL_PORTS = [4040, 4041, 4042, 4043,4044]
+ALL_PORTS = [4040, 4041, 4042, 4043]
 PORT = str(ALL_PORTS[ID])
 OTHER_IDS = [i for i in range(len(ALL_PORTS)) if i != ID]
 OTHER_PORTS = [port for port in ALL_PORTS if port != PORT]
@@ -31,12 +31,12 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
         self.node = node
 
     def appendEntry(self, request, context):
-        print("request received:", request)
+        self.node.stop_election_timeout()
+        self.node.current_role = "Follower"
         response = self.node.follower_recieving_message(request)
         return response
 
     def requestVote(self, request, context):
-        print("Request received:", request)
         response = self.node.vote_on_new_leader(request)
         return response
 
@@ -141,7 +141,8 @@ class Node:
                 if self.election_timer and self.election_timer_alive == False:
                     self.start_election_timeout()
             elif self.current_role == "Leader":
-                break
+                self.heartbeat()
+                time.sleep(1)
 
     def start_server(self):
         print("PID:", os.getpid())
@@ -203,11 +204,13 @@ class Node:
             and logOK
             and (self.voted_for == CId or self.voted_for == None)
         ):
+            print("I VOTED FOR:", CId)
             self.voted_for = CId
             response.voteGranted = True
             response.nodeId = self.node_id
             response.term = self.current_term
         else:
+            print("I DID NOT VOTE FOR:", CId)
             response.voteGranted = False
             response.nodeId = self.node_id
             response.term = self.current_term
@@ -219,7 +222,7 @@ class Node:
         request_vote_request = raft_pb2.RequestVoteRequest()
         self.voted_for = self.node_id
         self.votes_recieved.add(self.node_id)
-        request_vote_request.term = self.current_term + 1
+        self.current_term = self.current_term + 1
         last_term = 0
         if self.log.get_length() > 0:
             last_term = self.log.get_last_entry()[1]
@@ -238,9 +241,10 @@ class Node:
                 self.handle_vote_reponse(response)
             except:
                 print("❌ Error sending request to port:", str(OTHER_PORTS[ID]))
-        print("VOTES RECIEVED:",len(self.votes_recieved))
+        print("VOTES RECIEVED:", len(self.votes_recieved))
 
-        self.start_election_timeout()
+        if self.current_role == "Candidate":
+            self.start_election_timeout()
 
     def handle_vote_reponse(self, response):
         responder_id = response.nodeId
@@ -265,13 +269,14 @@ class Node:
                     except:
                         print("❌ Error sending request to port:", OTHER_PORTS[ID])
             elif responder_term > self.current_term:
-                self.current_term = responder_term 
+                self.current_term = responder_term
                 self.current_role = "Follower"
                 self.voted_for = None
                 self.stop_election_timeout()
-                  
 
     def replicate_log(self, leaderId, followerId):
+        if not self.sent_length[followerId]:
+            self.sent_length[followerId] = 0
         prefixLen = self.sent_length[followerId]
         suffix = []
         for i in range(prefixLen, self.log.get_length()):
@@ -281,16 +286,16 @@ class Node:
             prefixTerm = self.log.get_entry(prefixLen - 1)[1]
 
         # Send Log request
-        suffix_entry = raft_pb2.AppendEntryRequest.Entry()
+        suffix_entry = raft_pb2.Entry()
 
         for entry in suffix:
             suffix_entry.commands.append(str(entry[0]) + " " + str(entry[1]))
-        
+
         append_entry_request = raft_pb2.AppendEntryRequest()
         append_entry_request.term = self.current_term
-        append_entry_request.leaderId = leaderId 
-        append_entry_request.prevLogIndex = prefixLen 
-        append_entry_request.prevLogTerm = prefixTerm 
+        append_entry_request.leaderId = leaderId
+        append_entry_request.prevLogIndex = prefixLen
+        append_entry_request.prevLogTerm = prefixTerm
         append_entry_request.entries.CopyFrom(suffix_entry)
         append_entry_request.leaderCommit = self.commit_length
         try:
@@ -307,68 +312,70 @@ class Node:
         if self.current_role == "Leader":
             self.log.add_entry(self.current_term, message.Request)
             self.acked_length[self.node_id] = self.log.get_length()
-            for follower in OTHER_PORTS:
-                self.replicate_log(self.node_id, follower)
+            for follower_id in OTHER_IDS:
+                self.replicate_log(self.node_id, follower_id)
         else:
             # Forward the request to the current Leader
             print("Something to be done here")
 
-    def heartbeat(self, message):
+    def heartbeat(self):
         if self.current_role == "Leader":
-            for follower in OTHER_PORTS:
-                self.replicate_log(self.node_id, follower)
+            for follower_id in OTHER_IDS:
+                self.replicate_log(self.node_id, follower_id)
 
-    def follower_recieving_message(self,message):
+    def follower_recieving_message(self, message):
         # Function 6 out of 9
-        leader_id=message.leaderId
-        term=message.term
-        prefixLen=message.prevLogIndex
-        prefixTerm=message.prevLogTerm
-        leaderCommit=message.leaderCommit
+        leader_id = message.leaderId
+        term = message.term
+        prefixLen = message.prevLogIndex
+        prefixTerm = message.prevLogTerm
+        leaderCommit = message.leaderCommit
         # problematic
-        suffix=message.entries.commands
+        suffix = message.entries.commands
 
-        if term> self.current_term:
-            self.current_term=term
-            self.voted_for=None
+        if term > self.current_term:
+            self.current_term = term
+            self.voted_for = None
             self.stop_election_timeout()
-        
-        if term==self.current_term:
-            self.current_role="Follower"
-            self.current_leader=leader_id
-        
-        logOK=(self.log.get_length()>=prefixLen) and (prefixLen==0 or self.log.get_entry(prefixLen)[0]==prefixTerm)
+
+        if term == self.current_term:
+            print("👂 Recieved message from Leader-", leader_id)
+            self.current_role = "Follower"
+            self.current_leader = leader_id
+
+        logOK = (self.log.get_length() >= prefixLen) and (
+            prefixLen == 0 or self.log.get_entry(prefixLen)[0] == prefixTerm
+        )
         append_entry_response = raft_pb2.AppendEntryResponse()
-        append_entry_response.nodeId=self.node_id
-        append_entry_response.term=self.current_term
-        if term==self.current_term and logOK:
-            self.append_entries(prefixLen,leaderCommit,suffix)
+        append_entry_response.nodeId = self.node_id
+        append_entry_response.term = self.current_term
+        if term == self.current_term and logOK:
+            self.append_entries(prefixLen, leaderCommit, suffix)
             ack = prefixLen + len(suffix)
-            append_entry_response.ack=ack
-            append_entry_response.success=True
+            append_entry_response.ack = ack
+            append_entry_response.success = True
         else:
-            append_entry_response.ack=0
-            append_entry_response.success=False
+            append_entry_response.ack = 0
+            append_entry_response.success = False
 
-        return append_entry_response    
+        return append_entry_response
 
-                
-    def append_entries(self,prefixLen,leaderCommit,suffix):
-        #Function 7 out of 9
-        if len(suffix)>0 and self.log.get_length()>prefixLen:
-            index=min(self.log.get_length(),prefixLen+len(suffix))-1
-            if self.log.get_entry[index][1]!=suffix[index-prefixLen].split()[-1]:
+    def append_entries(self, prefixLen, leaderCommit, suffix):
+        # Function 7 out of 9
+        if len(suffix) > 0 and self.log.get_length() > prefixLen:
+            index = min(self.log.get_length(), prefixLen + len(suffix)) - 1
+            if self.log.get_entry[index][1] != suffix[index - prefixLen].split()[-1]:
                 self.log.modify_log(self.log.get_entries()[0:prefixLen])
-        if prefixLen+len(suffix)>self.log.get_length():
-            for i in range(self.log.get_length()-prefixLen,len(suffix)):
-                command=" ".join(suffix[i].split()[0:-1])
-                term=suffix[i].split()[-1]
-                self.log.add_entry(term,command)
-        if leaderCommit>self.commit_length:
-            for i in range(self.commit_length,leaderCommit):
-                print("COMMITTED",self.log.get_entry(i)[0])
-            self.commit_length=leaderCommit
-        return 
+        if prefixLen + len(suffix) > self.log.get_length():
+            for i in range(self.log.get_length() - prefixLen, len(suffix)):
+                command = " ".join(suffix[i].split()[0:-1])
+                term = suffix[i].split()[-1]
+                self.log.add_entry(term, command)
+        if leaderCommit > self.commit_length:
+            for i in range(self.commit_length, leaderCommit):
+                print("COMMITTED", self.log.get_entry(i)[0])
+            self.commit_length = leaderCommit
+        return
 
 
 if __name__ == "__main__":
