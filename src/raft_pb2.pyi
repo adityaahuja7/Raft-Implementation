@@ -23,10 +23,10 @@ class AppendEntryRequest(_message.Message):
     leaderId: int
     prevLogIndex: int
     prevLogTerm: int
-    entries: _containers.RepeatedCompositeFieldContainer[AppendEntryRequest.Entry]
+    entries: AppendEntryRequest.Entry
     leaseDuration: float
     leaderCommit: int
-    def __init__(self, term: _Optional[int] = ..., leaderId: _Optional[int] = ..., prevLogIndex: _Optional[int] = ..., prevLogTerm: _Optional[int] = ..., entries: _Optional[_Iterable[_Union[AppendEntryRequest.Entry, _Mapping]]] = ..., leaseDuration: _Optional[float] = ..., leaderCommit: _Optional[int] = ...) -> None: ...
+    def __init__(self, term: _Optional[int] = ..., leaderId: _Optional[int] = ..., prevLogIndex: _Optional[int] = ..., prevLogTerm: _Optional[int] = ..., entries: _Optional[_Union[AppendEntryRequest.Entry, _Mapping]] = ..., leaseDuration: _Optional[float] = ..., leaderCommit: _Optional[int] = ...) -> None: ...
 
 class AppendEntryResponse(_message.Message):
     __slots__ = ("term", "success")
