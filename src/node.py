@@ -37,9 +37,8 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
 
     def requestVote(self, request, context):
         print("Request received:", request)
-        response = raft_pb2.RequestVoteResponse()
-        response.term = 10291  
-        response.voteGranted = True
+        response = raft_pb2.RequestVoteRequest()
+        self.node.vote_on_new_leader(response)
         return response
 
 
@@ -58,6 +57,8 @@ class Log:
         self.entries.append((command, term))
 
     def get_last_entry(self):
+        # What does this return?
+        # assumption second is term?
         return self.entries[-1][0], int(self.entries[-1][1])
 
     def get_entry(self, index):
@@ -98,6 +99,7 @@ class Node:
         self.election_timer = None
         self.log_file = None
         self.temp = 0
+        self.last_term=None
 
     def initialize_node(self, node_id):
         self.node_id = node_id
@@ -134,8 +136,8 @@ class Node:
     def start_client(self):
         while True:
             if self.current_role == "Candidate":
-                self.send_request_vote()
-                self.current_role = "Follower"
+                if self.election_timer and self.election_timer_alive == False:
+                    self.send_request_vote()
             elif self.current_role == "Follower":
                 if self.election_timer and self.election_timer_alive == False:
                     self.start_election_timeout()
@@ -176,6 +178,27 @@ class Node:
         self.current_role = "Candidate"
         lock.release()
 
+    def vote_on_new_leader(self,response):
+        cTerm=response.term
+        CId=response.candidateId
+        cLogLength=response.lastLogIndex
+        cLogTerm=response.lastLogTerm
+        if cTerm>self.current_term:
+            self.current_term=cTerm
+            self.current_role="Follower"
+            self.voted_for=None
+        self.last_term=0
+        if self.log.get_length()>0:
+            _,term=self.log.get_last_entry()
+            self.last_term=term
+        logOK= (cLogTerm > self.last_term) or ((cLogTerm == self.last_term) and (cLogLength >= self.log.get_length()))
+        if (cTerm==self.current_term) and logOK and (self.voted_for==CId or self.voted_for==None):
+            self.voted_for=CId
+            # Send message here as per Pseudo code
+        else:
+            #sendMessage here as per pseudo code
+            print("BRUHH")
+
     def send_request_vote(self):
         print("🗳 Requesting votes...")
         request_vote_request = raft_pb2.RequestVoteRequest()
@@ -185,7 +208,6 @@ class Node:
         last_term = 0
         if self.log.get_length()> 0:
             last_term = self.log.get_last_entry()[1]
-        
         request_vote_request.term = self.current_term
         request_vote_request.candidateId = self.node_id
         request_vote_request.lastLogIndex = max(0, self.log.get_length() - 1)
@@ -199,12 +221,15 @@ class Node:
                 print(response)
             except:
                 print("❌ Error sending request vote to port:", port)
-                
-        # manage responses
+        
+        self.start_election_timeout()
+
+    def collecting_votes(response):
+        voterId=
+
         
 
 
 if __name__ == "__main__":
-
     node = Node()
     node.initialize_node(int(PORT))
