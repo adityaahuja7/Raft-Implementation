@@ -31,8 +31,8 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
         self.node = node
 
     def appendEntry(self, request, context):
-        self.node.stop_election_timeout()
-        self.node.current_role = "Follower"
+        # self.node.stop_election_timeout()
+        # self.node.current_role = "Follower"
         response = self.node.follower_recieving_message(request)
         return response
 
@@ -305,8 +305,48 @@ class Node:
             print("✅ Log replicated to Node-", followerId)
         except:
             print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
-
+            return
+        
+        response
         return
+    
+    
+    def recieve_log_ack(self,follower,term,ack,success):
+        # Function 8 out of 9
+        if term==self.current_term and self.current_role=="Leader":
+            if success==True and ack>=self.acked_length[follower]:
+                self.sent_length[follower]=ack
+                self.acked_length[follower]=ack
+                self.commitlogentries()
+            elif self.sent_length[follower]>0:
+                self.sent_length[follower]-=1
+                self.replicate_log(self.node_id,follower)
+        elif term>self.current_term:
+            self.current_term=term
+            self.current_role="Follower"
+            self.voted_for=None
+            self.stop_election_timeout()
+
+    def set_of_acks(self,length):
+        #Helper Function 9 out of 9
+        count=0
+        for i in self.acked_length.keys():
+            if self.acked_length[i]>=length:
+                count+=1
+        return count
+    
+    def commitlogentries(self):
+        #Function 9 out of 9
+        minacks=len(ALL_PORTS) /2
+        ready=[]
+        for i in range(1,self.length+1):
+            if self.set_of_acks(i)>=minacks:
+                ready.append(i)
+        if len(ready)>0 and max(ready)>self.commit_length and self.log.get_entry[max(ready)-1][1]==self.current_term:
+            for i in range(self.commit_length,max(ready)):
+                print("MESSAGE ACKED:",self.log.get_entry[i][0])
+            self.commit_length=max(ready)
+        return 
 
     def broadcast_message_on_call(self, message):
         if self.current_role == "Leader":
