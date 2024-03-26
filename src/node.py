@@ -230,8 +230,36 @@ class Node:
 
     def collecting_votes(response):
         return 
+    
 
+    def replicate_log(self,leaderId,followerId):
+        prefixLen=self.sent_length[followerId]
+        suffix=[]
+        for i in range(prefixLen,self.log.get_length):
+            suffix.append(self.log.get_entry[i])
+        prefixTerm=0
+        if prefixTerm>0:
+            prefixTerm=self.log.get_entry(prefixLen-1)[1]
         
+        # Send Log request
+        print ("Write somethign here Poggi")
+        return
+
+
+    def broadcast_message_on_call(self,message):
+        if self.current_role=="Leader":
+            self.log.add_entry(self.current_term,message.Request)
+            self.acked_length[self.node_id]=self.log.get_length()
+            for follower in OTHER_PORTS:
+                self.replicate_log(self.node_id,follower)
+        else:
+            #Forward the request to the current Leader
+            print("Something to be done here")
+    
+    def heartbeat(self,message):
+        if self.current_role=="Leader":
+            for follower in OTHER_PORTS:
+                self.replicate_log(self.node_id,follower)
 
 
 if __name__ == "__main__":
