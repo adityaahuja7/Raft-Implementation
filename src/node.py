@@ -32,6 +32,8 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
 
     def appendEntry(self, request, context):
         print("request received:", request)
+        response = self.node.follower_recieving_message(request)
+        return response
 
     def requestVote(self, request, context):
         print("Request received:", request)
@@ -298,8 +300,7 @@ class Node:
             print("✅ Log replicated to Node-", followerId)
         except:
             print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
-        
-        
+
         return
 
     def broadcast_message_on_call(self, message):
@@ -316,6 +317,58 @@ class Node:
         if self.current_role == "Leader":
             for follower in OTHER_PORTS:
                 self.replicate_log(self.node_id, follower)
+
+    def follower_recieving_message(self,message):
+        # Function 6 out of 9
+        leader_id=message.leaderId
+        term=message.term
+        prefixLen=message.prevLogIndex
+        prefixTerm=message.prevLogTerm
+        leaderCommit=message.leaderCommit
+        # problematic
+        suffix=message.entries.commands
+
+        if term> self.current_term:
+            self.current_term=term
+            self.voted_for=None
+            self.stop_election_timeout()
+        
+        if term==self.current_term:
+            self.current_role="Follower"
+            self.current_leader=leader_id
+        
+        logOK=(self.log.get_length()>=prefixLen) and (prefixLen==0 or self.log.get_entry(prefixLen)[0]==prefixTerm)
+        append_entry_response = raft_pb2.AppendEntryResponse()
+        append_entry_response.nodeId=self.node_id
+        append_entry_response.term=self.current_term
+        if term==self.current_term and logOK:
+            self.append_entries(prefixLen,leaderCommit,suffix)
+            ack = prefixLen + len(suffix)
+            append_entry_response.ack=ack
+            append_entry_response.success=True
+        else:
+            append_entry_response.ack=0
+            append_entry_response.success=False
+
+        return append_entry_response    
+
+                
+    def append_entries(self,prefixLen,leaderCommit,suffix):
+        #Function 7 out of 9
+        if len(suffix)>0 and self.log.get_length()>prefixLen:
+            index=min(self.log.get_length(),prefixLen+len(suffix))-1
+            if self.log.get_entry[index][1]!=suffix[index-prefixLen].split()[-1]:
+                self.log.modify_log(self.log.get_entries()[0:prefixLen])
+        if prefixLen+len(suffix)>self.log.get_length():
+            for i in range(self.log.get_length()-prefixLen,len(suffix)):
+                command=" ".join(suffix[i].split()[0:-1])
+                term=suffix[i].split()[-1]
+                self.log.add_entry(term,command)
+        if leaderCommit>self.commit_length:
+            for i in range(self.commit_length,leaderCommit):
+                print("COMMITTED",self.log.get_entry(i)[0])
+            self.commit_length=leaderCommit
+        return 
 
 
 if __name__ == "__main__":

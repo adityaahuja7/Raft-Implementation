@@ -27,6 +27,8 @@ message AppendEntryRequest {
 message AppendEntryResponse {
     int32 term = 1;
     int32 success = 2;
+    int32 nodeId = 3;
+    int32 ack = 4;
 }
 
 message RequestVoteRequest {

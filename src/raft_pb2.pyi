@@ -5,13 +5,14 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
+class Entry(_message.Message):
+    __slots__ = ("commands",)
+    COMMANDS_FIELD_NUMBER: _ClassVar[int]
+    commands: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, commands: _Optional[_Iterable[str]] = ...) -> None: ...
+
 class AppendEntryRequest(_message.Message):
     __slots__ = ("term", "leaderId", "prevLogIndex", "prevLogTerm", "entries", "leaseDuration", "leaderCommit")
-    class Entry(_message.Message):
-        __slots__ = ("commands",)
-        COMMANDS_FIELD_NUMBER: _ClassVar[int]
-        commands: _containers.RepeatedScalarFieldContainer[str]
-        def __init__(self, commands: _Optional[_Iterable[str]] = ...) -> None: ...
     TERM_FIELD_NUMBER: _ClassVar[int]
     LEADERID_FIELD_NUMBER: _ClassVar[int]
     PREVLOGINDEX_FIELD_NUMBER: _ClassVar[int]
@@ -23,18 +24,22 @@ class AppendEntryRequest(_message.Message):
     leaderId: int
     prevLogIndex: int
     prevLogTerm: int
-    entries: AppendEntryRequest.Entry
+    entries: Entry
     leaseDuration: float
     leaderCommit: int
-    def __init__(self, term: _Optional[int] = ..., leaderId: _Optional[int] = ..., prevLogIndex: _Optional[int] = ..., prevLogTerm: _Optional[int] = ..., entries: _Optional[_Union[AppendEntryRequest.Entry, _Mapping]] = ..., leaseDuration: _Optional[float] = ..., leaderCommit: _Optional[int] = ...) -> None: ...
+    def __init__(self, term: _Optional[int] = ..., leaderId: _Optional[int] = ..., prevLogIndex: _Optional[int] = ..., prevLogTerm: _Optional[int] = ..., entries: _Optional[_Union[Entry, _Mapping]] = ..., leaseDuration: _Optional[float] = ..., leaderCommit: _Optional[int] = ...) -> None: ...
 
 class AppendEntryResponse(_message.Message):
-    __slots__ = ("term", "success")
+    __slots__ = ("term", "success", "nodeId", "ack")
     TERM_FIELD_NUMBER: _ClassVar[int]
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    NODEID_FIELD_NUMBER: _ClassVar[int]
+    ACK_FIELD_NUMBER: _ClassVar[int]
     term: int
     success: int
-    def __init__(self, term: _Optional[int] = ..., success: _Optional[int] = ...) -> None: ...
+    nodeId: int
+    ack: int
+    def __init__(self, term: _Optional[int] = ..., success: _Optional[int] = ..., nodeId: _Optional[int] = ..., ack: _Optional[int] = ...) -> None: ...
 
 class RequestVoteRequest(_message.Message):
     __slots__ = ("term", "candidateId", "lastLogIndex", "lastLogTerm")
