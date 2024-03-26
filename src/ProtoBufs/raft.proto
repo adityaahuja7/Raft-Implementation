@@ -43,7 +43,7 @@ message ServeClientArgs {
     string Request = 1;
   }
   
-  message ServeClientReply {
+message ServeClientReply {
     string Data = 1;
     string LeaderID = 2;
     bool Success = 3;
