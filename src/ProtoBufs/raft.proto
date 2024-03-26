@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package raft;
 
+// python -m grpc_tools.protoc -I.\src\ProtoBufs  --python_out=.\src --pyi_out=.\src --grpc_python_out=.\src .\src\ProtoBufs\raft.proto
+
 service raft_service {
     rpc appendEntry (AppendEntryRequest) returns (AppendEntryResponse) {}
     rpc requestVote (RequestVoteRequest) returns (RequestVoteResponse) {}
@@ -37,6 +39,7 @@ message RequestVoteRequest {
 message RequestVoteResponse {
     int32 term = 1;
     int32 voteGranted = 2;
+    int32 nodeId = 3;
 }
 
 message ServeClientArgs {

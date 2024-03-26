@@ -20,7 +20,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # DEVELOPMENT VARIABLES
 PORT = input("ENTRY PORT: ")
-ALL_PORTS = [str(4040), str(4041)]
+ALL_PORTS = [str(4040), str(4041), str(4042)]
 OTHER_PORTS = [port for port in ALL_PORTS if port != PORT]
 
 
@@ -29,16 +29,11 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
         self.node = node
 
     def appendEntry(self, request, context):
-        print(request)
-        response = raft_pb2.AppendEntryResponse()
-        response.term = 10291
-        response.success = True
-        return response
+        print("request received:", request)
 
     def requestVote(self, request, context):
         print("Request received:", request)
-        response = raft_pb2.RequestVoteRequest()
-        self.node.vote_on_new_leader(response)
+        response = self.node.vote_on_new_leader(request)
         return response
 
 
@@ -143,7 +138,6 @@ class Node:
                     self.start_election_timeout()
             elif self.current_role == "Leader":
                 self.send_replicate_log()
-        print("NO BUGS!")
 
     def start_server(self):
         print("PID:", os.getpid())
@@ -192,12 +186,21 @@ class Node:
             _,term=self.log.get_last_entry()
             self.last_term=term
         logOK= (cLogTerm > self.last_term) or ((cLogTerm == self.last_term) and (cLogLength >= self.log.get_length()))
+        
+        response = raft_pb2.RequestVoteResponse()
+        
         if (cTerm==self.current_term) and logOK and (self.voted_for==CId or self.voted_for==None):
             self.voted_for=CId
-            # Send message here as per Pseudo code
+            response.voteGranted=True
+            response.nodeId = self.node_id
+            response.term=self.current_term
         else:
-            #sendMessage here as per pseudo code
-            print("BRUHH")
+            response.voteGranted=False
+            response.nodeId = self.node_id
+            response.term=self.current_term
+            
+        return response
+            
 
     def send_request_vote(self):
         print("🗳 Requesting votes...")
@@ -212,20 +215,21 @@ class Node:
         request_vote_request.candidateId = self.node_id
         request_vote_request.lastLogIndex = max(0, self.log.get_length() - 1)
         request_vote_request.lastLogTerm = last_term
-        
+        responses = {}
         for port in OTHER_PORTS:
             try:
                 channel = grpc.insecure_channel("localhost:" + str(port))
                 stub = raft_pb2_grpc.raft_serviceStub(channel)
-                response = stub.requestVote(request_vote_request)
-                print(response)
+                response =  stub.requestVote(request_vote_request)
+                responses[response.nodeId] = response
+                print("❎ Response recieved from Node-",response.nodeId)     
             except:
-                print("❌ Error sending request vote to port:", port)
+                print("❌ Error sending request to port:", port)
         
         self.start_election_timeout()
 
     def collecting_votes(response):
-        voterId=
+        return 
 
         
 

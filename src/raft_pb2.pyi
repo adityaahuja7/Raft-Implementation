@@ -49,9 +49,27 @@ class RequestVoteRequest(_message.Message):
     def __init__(self, term: _Optional[int] = ..., candidateId: _Optional[int] = ..., lastLogIndex: _Optional[int] = ..., lastLogTerm: _Optional[int] = ...) -> None: ...
 
 class RequestVoteResponse(_message.Message):
-    __slots__ = ("term", "voteGranted")
+    __slots__ = ("term", "voteGranted", "nodeId")
     TERM_FIELD_NUMBER: _ClassVar[int]
     VOTEGRANTED_FIELD_NUMBER: _ClassVar[int]
+    NODEID_FIELD_NUMBER: _ClassVar[int]
     term: int
     voteGranted: int
-    def __init__(self, term: _Optional[int] = ..., voteGranted: _Optional[int] = ...) -> None: ...
+    nodeId: int
+    def __init__(self, term: _Optional[int] = ..., voteGranted: _Optional[int] = ..., nodeId: _Optional[int] = ...) -> None: ...
+
+class ServeClientArgs(_message.Message):
+    __slots__ = ("Request",)
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    Request: str
+    def __init__(self, Request: _Optional[str] = ...) -> None: ...
+
+class ServeClientReply(_message.Message):
+    __slots__ = ("Data", "LeaderID", "Success")
+    DATA_FIELD_NUMBER: _ClassVar[int]
+    LEADERID_FIELD_NUMBER: _ClassVar[int]
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    Data: str
+    LeaderID: str
+    Success: bool
+    def __init__(self, Data: _Optional[str] = ..., LeaderID: _Optional[str] = ..., Success: bool = ...) -> None: ...
