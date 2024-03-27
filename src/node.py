@@ -31,8 +31,8 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
         self.node = node
 
     def appendEntry(self, request, context):
-        # self.node.stop_election_timeout()
-        # self.node.current_role = "Follower"
+        if (self.node.current_role != "Leader"):
+            self.node.stop_election_timeout()
         response = self.node.follower_recieving_message(request)
         return response
 
@@ -56,8 +56,6 @@ class Log:
         self.entries.append((command, term))
 
     def get_last_entry(self):
-        # What does this return?
-        # assumption second is term?
         return self.entries[-1][0], int(self.entries[-1][1])
 
     def get_entry(self, index):
@@ -273,6 +271,8 @@ class Node:
                 self.current_role = "Follower"
                 self.voted_for = None
                 self.stop_election_timeout()
+        else:
+            pass
 
     def replicate_log(self, leaderId, followerId):
         if not self.sent_length[followerId]:
@@ -307,7 +307,7 @@ class Node:
             print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
             return
         
-        response
+        self.recieve_log_ack(response.nodeId,response.term,response.ack,response.success)
         return
     
     
@@ -317,7 +317,7 @@ class Node:
             if success==True and ack>=self.acked_length[follower]:
                 self.sent_length[follower]=ack
                 self.acked_length[follower]=ack
-                self.commitlogentries()
+                self.commit_log_entries()
             elif self.sent_length[follower]>0:
                 self.sent_length[follower]-=1
                 self.replicate_log(self.node_id,follower)
@@ -335,11 +335,11 @@ class Node:
                 count+=1
         return count
     
-    def commitlogentries(self):
+    def commit_log_entries(self):
         #Function 9 out of 9
-        minacks=len(ALL_PORTS) /2
+        minacks=len(ALL_PORTS)/2
         ready=[]
-        for i in range(1,self.length+1):
+        for i in range(1,self.log.get_length()+1):
             if self.set_of_acks(i)>=minacks:
                 ready.append(i)
         if len(ready)>0 and max(ready)>self.commit_length and self.log.get_entry[max(ready)-1][1]==self.current_term:
