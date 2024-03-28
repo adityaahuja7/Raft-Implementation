@@ -7,7 +7,7 @@ package raft;
 service raft_service {
     rpc appendEntry (AppendEntryRequest) returns (AppendEntryResponse) {}
     rpc requestVote (RequestVoteRequest) returns (RequestVoteResponse) {}
-    rpc ServeClient (ServeClientArgs) returns (ServeClientReply) {}
+    rpc serveClient (ServeClientArgs) returns (ServeClientReply) {}
 }
 
 message Entry {

@@ -1,37 +1,38 @@
 import concurrent.futures as futures
 import os
 import signal, sys
-import numpy as np
 import threading
 import grpc
 import raft_pb2_grpc
 import raft_pb2
 import time
 
+#|--------------------------------------|
+#| DEVELOPMENT VARIABLES                |
+#|--------------------------------------|
+
 lock = threading.Lock()
-
-
 def signal_handler(signal, frame):
     print("➡️  Received interrupt signal...")
     sys.exit(0)
-
-
 signal.signal(signal.SIGINT, signal_handler)
 
-# DEVELOPMENT VARIABLES
 ID = int(input("ENTER ID:"))
 ALL_PORTS = [4040, 4041, 4042, 4043]
 PORT = str(ALL_PORTS[ID])
 OTHER_IDS = [i for i in range(len(ALL_PORTS)) if i != ID]
 OTHER_PORTS = [port for port in ALL_PORTS if port != PORT]
 
+#|--------------------------------------|
+#| gRPC SERVICER CLASS                  |
+#|--------------------------------------|
 
 class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
     def __init__(self, node):
         self.node = node
 
-    def appendEntry(self, request, context):
-        if (self.node.current_role != "Leader"):
+    def appendEntry(self, request, copntext):
+        if self.node.current_role != "Leader":
             self.node.stop_election_timeout()
         response = self.node.follower_recieving_message(request)
         return response
@@ -39,7 +40,13 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
     def requestVote(self, request, context):
         response = self.node.vote_on_new_leader(request)
         return response
+    
+    def serveClient(self, request, context):
+        self.node.handle_broadcast_message(request)
 
+#|--------------------------------------|
+#| LOG CLASS                            |
+#|--------------------------------------|
 
 class Log:
     def __init__(self, log_file_path):
@@ -54,6 +61,7 @@ class Log:
 
     def add_entry(self, term, command):
         self.entries.append((command, term))
+        self.dump_log()
 
     def get_last_entry(self):
         return self.entries[-1][0], int(self.entries[-1][1])
@@ -70,18 +78,23 @@ class Log:
 
     def modify_log(self, entries):
         self.entries = entries
+        self.dump_log()
 
     def get_length(self):
         return len(self.entries)
 
     def dump_log(self):
+        open(self.log_file_path, "w").close()
         with open(self.log_file_path, "w") as f:
             for entry in self.entries:
                 f.write(str(entry[0]) + " " + str(entry[1]) + "\n")
             f.close()
 
-
 class Node:
+#|--------------------------------------|
+#| NODE INITIALIZATION                  |
+#|--------------------------------------|
+    
     def __init__(self):
         self.node_id = None
         self.current_term = None
@@ -113,14 +126,14 @@ class Node:
             self.election_timeout, self.handle_election_timeout
         )
         self.election_timer_alive = False
-        if os.path.exists("./log.txt"):
+        if os.path.exists("./logs/"+"log_"+str(self.node_id)+ ".txt"):
             print("➡️  NODE RESTARTED...")
-            self.log_file_path = "./log.txt"
         else:
             print("➡️  NODE INITIALIZED...")
-            self.log_file_path = "./log.txt"
-            open("./log.txt", "w").close()
+            os.mkdir("./logs/")
+            open("./logs/"+"log_"+str(self.node_id)+ ".txt", "w").close()
 
+        self.log_file_path = "./logs/"+"log_"+str(self.node_id)+ ".txt"
         self.log = Log(self.log_file_path)
         self.log.print_entries()
 
@@ -129,6 +142,10 @@ class Node:
         server_thread.daemon = True
         server_thread.start()
         self.start_client()
+        
+#|--------------------------------------|
+#| INITIALIZE CLIENT AND SERVER THREADS |
+#|--------------------------------------|
 
     def start_client(self):
         while True:
@@ -156,6 +173,10 @@ class Node:
         print("✅ Server started listening on port", port)
         server.wait_for_termination()
         return
+
+#|--------------------------------------|
+#| HANDLE ELECTION PROCESS              |
+#|--------------------------------------|
 
     def start_election_timeout(self):
         self.election_timer_alive = True
@@ -274,6 +295,10 @@ class Node:
         else:
             pass
 
+#|--------------------------------------|
+#| LEADER FUNCTIONALITY                 |
+#|--------------------------------------|
+
     def replicate_log(self, leaderId, followerId):
         if not self.sent_length[followerId]:
             self.sent_length[followerId] = 0
@@ -282,7 +307,7 @@ class Node:
         for i in range(prefixLen, self.log.get_length()):
             suffix.append(self.log.get_entry[i])
         prefixTerm = 0
-        if prefixTerm > 0:
+        if prefixLen > 0:
             prefixTerm = self.log.get_entry(prefixLen - 1)[1]
 
         # Send Log request
@@ -306,62 +331,96 @@ class Node:
         except:
             print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
             return
+
+        self.recieve_log_ack(
+            response.nodeId, response.term, response.ack, response.success
+        )
         
-        self.recieve_log_ack(response.nodeId,response.term,response.ack,response.success)
-        return
-    
-    
-    def recieve_log_ack(self,follower,term,ack,success):
+        return response
+
+    def recieve_log_ack(self, follower, term, ack, success):
         # Function 8 out of 9
-        if term==self.current_term and self.current_role=="Leader":
-            if success==True and ack>=self.acked_length[follower]:
-                self.sent_length[follower]=ack
-                self.acked_length[follower]=ack
+        if term == self.current_term and self.current_role == "Leader":
+            if success == True and ack >= self.acked_length[follower]:
+                self.sent_length[follower] = ack
+                self.acked_length[follower] = ack
                 self.commit_log_entries()
-            elif self.sent_length[follower]>0:
-                self.sent_length[follower]-=1
-                self.replicate_log(self.node_id,follower)
-        elif term>self.current_term:
-            self.current_term=term
-            self.current_role="Follower"
-            self.voted_for=None
+            elif self.sent_length[follower] > 0:
+                self.sent_length[follower] -= 1
+                self.replicate_log(self.node_id, follower)
+        elif term > self.current_term:
+            self.current_term = term
+            self.current_role = "Follower"
+            self.voted_for = None
             self.stop_election_timeout()
 
-    def set_of_acks(self,length):
-        #Helper Function 9 out of 9
-        count=0
+    def set_of_acks(self, length):
+        # Helper Function 9 out of 9
+        count = 0
         for i in self.acked_length.keys():
-            if self.acked_length[i]>=length:
-                count+=1
+            if self.acked_length[i] >= length:
+                count += 1
         return count
-    
-    def commit_log_entries(self):
-        #Function 9 out of 9
-        minacks=len(ALL_PORTS)/2
-        ready=[]
-        for i in range(1,self.log.get_length()+1):
-            if self.set_of_acks(i)>=minacks:
-                ready.append(i)
-        if len(ready)>0 and max(ready)>self.commit_length and self.log.get_entry[max(ready)-1][1]==self.current_term:
-            for i in range(self.commit_length,max(ready)):
-                print("MESSAGE ACKED:",self.log.get_entry[i][0])
-            self.commit_length=max(ready)
-        return 
 
-    def broadcast_message_on_call(self, message):
+    def commit_log_entries(self):
+        # Function 9 out of 9
+        minacks = len(ALL_PORTS) / 2
+        ready = []
+        for i in range(1, self.log.get_length() + 1):
+            if self.set_of_acks(i) >= minacks:
+                ready.append(i)
+        if (
+            len(ready) > 0
+            and max(ready) > self.commit_length
+            and self.log.get_entry[max(ready) - 1][1] == self.current_term
+        ):
+            for i in range(self.commit_length, max(ready)):
+                print("STATE COMMITED:", self.log.get_entry[i][0])
+            self.commit_length = max(ready)
+        return
+
+    def handle_broadcast_message(self, message):
         if self.current_role == "Leader":
+            log_replicate_responses = []
+            print("📝  Recieved client request...")
+            print("📝  Request:", message.Request)
             self.log.add_entry(self.current_term, message.Request)
             self.acked_length[self.node_id] = self.log.get_length()
             for follower_id in OTHER_IDS:
-                self.replicate_log(self.node_id, follower_id)
-        else:
-            # Forward the request to the current Leader
-            print("Something to be done here")
+                response = self.replicate_log(self.node_id, follower_id)
+                log_replicate_responses.append(response)
 
+            count_success = 0
+            for response in log_replicate_responses:
+                if response.success:
+                    count_success += 1
+            
+            user_response = raft_pb2.ServeClientResponse()
+            if count_success >= len(ALL_PORTS) / 2:
+                user_response.Response = "SUCCESS"
+                user_response.LeaderId = self.node_id
+                user_response.Data = message.Request + " successfully committed."
+                
+            
+        else:
+            print("📝  Recieved client request...")
+            print("⏩ Redirecting to Leader-", self.current_leader)
+            try:
+                channel = grpc.insecure_channel("localhost:" + str(OTHER_PORTS[self.current_leader]))
+                stub = raft_pb2_grpc.raft_serviceStub(channel)
+                response = stub.serveClient(message)
+                return response
+            except:
+                print("❌ Error forwarding request to leader port:", str(OTHER_PORTS[self.current_leader]))
+                      
     def heartbeat(self):
         if self.current_role == "Leader":
             for follower_id in OTHER_IDS:
                 self.replicate_log(self.node_id, follower_id)
+
+#|--------------------------------------|
+#| FOLLOWER FUNCTIONALITY               |
+#|--------------------------------------|
 
     def follower_recieving_message(self, message):
         # Function 6 out of 9
