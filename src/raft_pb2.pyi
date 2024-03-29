@@ -36,10 +36,10 @@ class AppendEntryResponse(_message.Message):
     NODEID_FIELD_NUMBER: _ClassVar[int]
     ACK_FIELD_NUMBER: _ClassVar[int]
     term: int
-    success: int
+    success: bool
     nodeId: int
     ack: int
-    def __init__(self, term: _Optional[int] = ..., success: _Optional[int] = ..., nodeId: _Optional[int] = ..., ack: _Optional[int] = ...) -> None: ...
+    def __init__(self, term: _Optional[int] = ..., success: bool = ..., nodeId: _Optional[int] = ..., ack: _Optional[int] = ...) -> None: ...
 
 class RequestVoteRequest(_message.Message):
     __slots__ = ("term", "candidateId", "lastLogIndex", "lastLogTerm")

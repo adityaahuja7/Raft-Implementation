@@ -1,6 +1,7 @@
 import concurrent.futures as futures
 import os
 import signal, sys
+import numpy as np
 import threading
 import grpc
 import raft_pb2_grpc
@@ -18,7 +19,7 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 ID = int(input("ENTER ID:"))
-ALL_PORTS = [4040, 4041, 4042, 4043]
+ALL_PORTS = [4040, 4041, 4042]
 PORT = str(ALL_PORTS[ID])
 OTHER_IDS = [i for i in range(len(ALL_PORTS)) if i != ID]
 OTHER_PORTS = [port for port in ALL_PORTS if port != PORT]
@@ -42,7 +43,8 @@ class raft_serviceServicer(raft_pb2_grpc.raft_serviceServicer):
         return response
     
     def serveClient(self, request, context):
-        self.node.handle_broadcast_message(request)
+        print("Request Recieved:", request.Request)
+        return self.node.handle_broadcast_message(request)
 
 #|--------------------------------------|
 #| LOG CLASS                            |
@@ -71,6 +73,13 @@ class Log:
 
     def get_entries(self):
         return self.entries
+    
+    def get_entry_by_key(self, key):
+        value = None
+        for entry in self.entries:
+            if entry[0].split()[0] == "SET" and entry[0].split()[1] == key:
+                value = entry[0].split()[2]
+        return value
 
     def print_entries(self):
         for entry in self.entries:
@@ -128,14 +137,18 @@ class Node:
         self.election_timer_alive = False
         if os.path.exists("./logs/"+"log_"+str(self.node_id)+ ".txt"):
             print("➡️  NODE RESTARTED...")
+            self.log_file_path = "./logs/"+"log_"+str(self.node_id)+ ".txt"
+            self.log = Log(self.log_file_path)
+            self.current_term = self.log.get_last_entry()[1]
         else:
             print("➡️  NODE INITIALIZED...")
-            os.mkdir("./logs/")
+            if not os.path.exists("./logs/"):
+                os.mkdir("./logs/")
             open("./logs/"+"log_"+str(self.node_id)+ ".txt", "w").close()
-
-        self.log_file_path = "./logs/"+"log_"+str(self.node_id)+ ".txt"
-        self.log = Log(self.log_file_path)
-        self.log.print_entries()
+            self.log_file_path = "./logs/"+"log_"+str(self.node_id)+ ".txt"
+            self.log = Log(self.log_file_path)
+            
+        print("📒  Current Log:",self.log.get_entries())
 
         print("⏰ Election timeout set to:", self.election_timeout)
         server_thread = threading.Thread(target=self.start_server)
@@ -199,11 +212,11 @@ class Node:
         self.current_role = "Candidate"
         lock.release()
 
-    def vote_on_new_leader(self, response):
-        cTerm = response.term
-        CId = response.candidateId
-        cLogLength = response.lastLogIndex
-        cLogTerm = response.lastLogTerm
+    def vote_on_new_leader(self, request):
+        cTerm = request.term
+        CId = request.candidateId
+        cLogLength = request.lastLogIndex
+        cLogTerm = request.lastLogTerm
         if cTerm > self.current_term:
             self.current_term = cTerm
             self.current_role = "Follower"
@@ -223,13 +236,13 @@ class Node:
             and logOK
             and (self.voted_for == CId or self.voted_for == None)
         ):
-            print("I VOTED FOR:", CId)
+            print("❎  I VOTED FOR:", CId)
             self.voted_for = CId
             response.voteGranted = True
             response.nodeId = self.node_id
             response.term = self.current_term
         else:
-            print("I DID NOT VOTE FOR:", CId)
+            print("❎ I DID NOT VOTE FOR:", CId)
             response.voteGranted = False
             response.nodeId = self.node_id
             response.term = self.current_term
@@ -247,7 +260,7 @@ class Node:
             last_term = self.log.get_last_entry()[1]
         request_vote_request.term = self.current_term
         request_vote_request.candidateId = self.node_id
-        request_vote_request.lastLogIndex = max(0, self.log.get_length() - 1)
+        request_vote_request.lastLogIndex = max(0, self.log.get_length())
         request_vote_request.lastLogTerm = last_term
         responses = {}
         for ID in OTHER_IDS:
@@ -300,37 +313,37 @@ class Node:
 #|--------------------------------------|
 
     def replicate_log(self, leaderId, followerId):
-        if not self.sent_length[followerId]:
+        if followerId not in self.sent_length.keys():
             self.sent_length[followerId] = 0
         prefixLen = self.sent_length[followerId]
-        suffix = []
-        for i in range(prefixLen, self.log.get_length()):
-            suffix.append(self.log.get_entry[i])
+        suffix = [self.log.get_entry(i) for i in range(prefixLen, self.log.get_length())]
+        
         prefixTerm = 0
         if prefixLen > 0:
             prefixTerm = self.log.get_entry(prefixLen - 1)[1]
 
-        # Send Log request
+
         suffix_entry = raft_pb2.Entry()
-
         for entry in suffix:
-            suffix_entry.commands.append(str(entry[0]) + " " + str(entry[1]))
+            suffix_entry.commands.append(f"{entry[0]} {entry[1]}")
 
-        append_entry_request = raft_pb2.AppendEntryRequest()
-        append_entry_request.term = self.current_term
-        append_entry_request.leaderId = leaderId
-        append_entry_request.prevLogIndex = prefixLen
-        append_entry_request.prevLogTerm = prefixTerm
-        append_entry_request.entries.CopyFrom(suffix_entry)
-        append_entry_request.leaderCommit = self.commit_length
-        try:
-            channel = grpc.insecure_channel("localhost:" + str(OTHER_PORTS[followerId]))
-            stub = raft_pb2_grpc.raft_serviceStub(channel)
-            response = stub.appendEntry(append_entry_request)
-            print("✅ Log replicated to Node-", followerId)
-        except:
-            print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
-            return
+        append_entry_request = raft_pb2.AppendEntryRequest(
+            term=self.current_term,
+            leaderId=leaderId,
+            prevLogIndex=prefixLen,
+            prevLogTerm=prefixTerm,
+            entries=suffix_entry,
+            leaderCommit=self.commit_length
+        )
+
+        # try:
+        channel = grpc.insecure_channel(f"localhost:{OTHER_PORTS[followerId]}")
+        stub = raft_pb2_grpc.raft_serviceStub(channel)
+        response = stub.appendEntry(append_entry_request)
+        print(f"✅ Log replicated to Node-{followerId}")
+        # except:
+            # print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
+            # return
 
         self.recieve_log_ack(
             response.nodeId, response.term, response.ack, response.success
@@ -372,10 +385,10 @@ class Node:
         if (
             len(ready) > 0
             and max(ready) > self.commit_length
-            and self.log.get_entry[max(ready) - 1][1] == self.current_term
+            and self.log.get_entry(max(ready) - 1)[1] == self.current_term
         ):
             for i in range(self.commit_length, max(ready)):
-                print("STATE COMMITED:", self.log.get_entry[i][0])
+                print("STATE COMMITED:", self.log.get_entry(i)[0])
             self.commit_length = max(ready)
         return
 
@@ -395,13 +408,22 @@ class Node:
                 if response.success:
                     count_success += 1
             
-            user_response = raft_pb2.ServeClientResponse()
-            if count_success >= len(ALL_PORTS) / 2:
-                user_response.Response = "SUCCESS"
-                user_response.LeaderId = self.node_id
-                user_response.Data = message.Request + " successfully committed."
-                
+            user_response = raft_pb2.ServeClientReply()
             
+            if count_success >= len(ALL_PORTS) / 2:
+                user_response.Success = True
+                user_response.LeaderID = str(0)
+                if (message.Request.split()[0] == "GET"):
+                    user_response.Data = str(self.log.get_entry_by_key(message.Request.split()[1]))
+                else:
+                    user_response.Data = str(message.Request) + " successfully committed."
+            else:
+                user_response.Response = False
+                user_response.LeaderID = str(0)
+                user_response.Data = "Request could not be committed."
+                
+            return user_response
+              
         else:
             print("📝  Recieved client request...")
             print("⏩ Redirecting to Leader-", self.current_leader)
@@ -431,6 +453,7 @@ class Node:
         leaderCommit = message.leaderCommit
         # problematic
         suffix = message.entries.commands
+        print("SUFFIX: ", suffix)
 
         if term > self.current_term:
             self.current_term = term
@@ -443,7 +466,7 @@ class Node:
             self.current_leader = leader_id
 
         logOK = (self.log.get_length() >= prefixLen) and (
-            prefixLen == 0 or self.log.get_entry(prefixLen)[0] == prefixTerm
+            prefixLen == 0 or self.log.get_entry(prefixLen-1)[1] == prefixTerm
         )
         append_entry_response = raft_pb2.AppendEntryResponse()
         append_entry_response.nodeId = self.node_id
@@ -463,7 +486,7 @@ class Node:
         # Function 7 out of 9
         if len(suffix) > 0 and self.log.get_length() > prefixLen:
             index = min(self.log.get_length(), prefixLen + len(suffix)) - 1
-            if self.log.get_entry[index][1] != suffix[index - prefixLen].split()[-1]:
+            if self.log.get_entry(index)[1] != suffix[index - prefixLen].split()[-1]:
                 self.log.modify_log(self.log.get_entries()[0:prefixLen])
         if prefixLen + len(suffix) > self.log.get_length():
             for i in range(self.log.get_length() - prefixLen, len(suffix)):
