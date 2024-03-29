@@ -111,6 +111,7 @@ class Node:
     def __init__(self):
         self.node_id = None
         self.current_term = None
+        self.leader_lease=None
         self.voted_for = None
         self.log = None
         self.commit_length = None
@@ -128,6 +129,7 @@ class Node:
         self.node_id = node_id
         self.current_term = 0
         self.voted_for = None
+        self.leader_lease=5
         self.commit_length = 0
         self.current_role = "Follower"
         self.current_leader = None
