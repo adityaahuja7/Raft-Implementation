@@ -19,10 +19,9 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 ID = int(input("ENTER ID:"))
-ALL_PORTS = [4040, 4041, 4042]
+ALL_PORTS = [4040, 4041, 4042, 4043]
 PORT = str(ALL_PORTS[ID])
 OTHER_IDS = [i for i in range(len(ALL_PORTS)) if i != ID]
-OTHER_PORTS = [port for port in ALL_PORTS if port != PORT]
 
 #|--------------------------------------|
 #| gRPC SERVICER CLASS                  |
@@ -99,7 +98,12 @@ class Log:
                 f.write(str(entry[0]) + " " + str(entry[1]) + "\n")
             f.close()
 
+#|--------------------------------------|
+#| NODE CLASS                           |
+#|--------------------------------------|
+
 class Node:
+    
 #|--------------------------------------|
 #| NODE INITIALIZATION                  |
 #|--------------------------------------|
@@ -265,15 +269,14 @@ class Node:
         responses = {}
         for ID in OTHER_IDS:
             try:
-                channel = grpc.insecure_channel("localhost:" + str(OTHER_PORTS[ID]))
+                channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[ID]))
                 stub = raft_pb2_grpc.raft_serviceStub(channel)
                 response = stub.requestVote(request_vote_request)
                 responses[response.nodeId] = response
                 print("❎ Response recieved from Node-", response.nodeId)
                 self.handle_vote_reponse(response)
             except:
-                print("❌ Error sending request to port:", str(OTHER_PORTS[ID]))
-        print("VOTES RECIEVED:", len(self.votes_recieved))
+                print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
 
         if self.current_role == "Candidate":
             self.start_election_timeout()
@@ -299,7 +302,7 @@ class Node:
                         self.acked_length[ID] = 0
                         self.replicate_log(self.current_leader, ID)
                     except:
-                        print("❌ Error sending request to port:", OTHER_PORTS[ID])
+                        print("❌ Error sending request to port:", ALL_PORTS[ID])
             elif responder_term > self.current_term:
                 self.current_term = responder_term
                 self.current_role = "Follower"
@@ -336,15 +339,15 @@ class Node:
             leaderCommit=self.commit_length
         )
 
-        # try:
-        channel = grpc.insecure_channel(f"localhost:{OTHER_PORTS[followerId]}")
-        stub = raft_pb2_grpc.raft_serviceStub(channel)
-        response = stub.appendEntry(append_entry_request)
-        print(f"✅ Log replicated to Node-{followerId}")
-        # except:
-            # print("❌ Error sending request to port:", str(OTHER_PORTS[followerId]))
-            # return
-
+        try:
+            channel = grpc.insecure_channel(f"localhost:{ALL_PORTS[followerId]}")
+            stub = raft_pb2_grpc.raft_serviceStub(channel)
+            response = stub.appendEntry(append_entry_request)
+            print(f"✅ Log replicated to Node-{followerId}")
+        except:
+            print("❌ Error sending request to port:", str(ALL_PORTS[followerId]))
+            return
+        
         self.recieve_log_ack(
             response.nodeId, response.term, response.ack, response.success
         )
@@ -401,25 +404,27 @@ class Node:
             self.acked_length[self.node_id] = self.log.get_length()
             for follower_id in OTHER_IDS:
                 response = self.replicate_log(self.node_id, follower_id)
-                log_replicate_responses.append(response)
+                if (response): log_replicate_responses.append(response)
 
             count_success = 0
             for response in log_replicate_responses:
                 if response.success:
                     count_success += 1
+                    
+            print("SUCCESS COUNT:",count_success)
             
             user_response = raft_pb2.ServeClientReply()
             
-            if count_success >= len(ALL_PORTS) / 2:
+            if count_success >= len(log_replicate_responses) / 2:
                 user_response.Success = True
-                user_response.LeaderID = str(0)
+                user_response.LeaderID = str(self.current_leader)
                 if (message.Request.split()[0] == "GET"):
                     user_response.Data = str(self.log.get_entry_by_key(message.Request.split()[1]))
                 else:
                     user_response.Data = str(message.Request) + " successfully committed."
             else:
                 user_response.Response = False
-                user_response.LeaderID = str(0)
+                user_response.LeaderID = str(self.current_leader)
                 user_response.Data = "Request could not be committed."
                 
             return user_response
@@ -427,13 +432,14 @@ class Node:
         else:
             print("📝  Recieved client request...")
             print("⏩ Redirecting to Leader-", self.current_leader)
-            try:
-                channel = grpc.insecure_channel("localhost:" + str(OTHER_PORTS[self.current_leader]))
-                stub = raft_pb2_grpc.raft_serviceStub(channel)
-                response = stub.serveClient(message)
-                return response
-            except:
-                print("❌ Error forwarding request to leader port:", str(OTHER_PORTS[self.current_leader]))
+            # try:
+            channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[self.current_leader]))
+            stub = raft_pb2_grpc.raft_serviceStub(channel)
+            response = stub.serveClient(message)
+            print("📝  Response from Leader-", self.current_leader, ":", response)
+            return response
+            # except:
+            #     print("❌ Error forwarding request to leader port:", str(ALL_PORTS[self.current_leader]))
                       
     def heartbeat(self):
         if self.current_role == "Leader":
@@ -451,9 +457,8 @@ class Node:
         prefixLen = message.prevLogIndex
         prefixTerm = message.prevLogTerm
         leaderCommit = message.leaderCommit
-        # problematic
         suffix = message.entries.commands
-        print("SUFFIX: ", suffix)
+
 
         if term > self.current_term:
             self.current_term = term
