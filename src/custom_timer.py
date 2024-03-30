@@ -1,7 +1,7 @@
 import threading
 import time
 
-class TimerWithRemainingTime(threading.Timer):
+class LeaseTimer(threading.Timer):
     def __init__(self, interval, function, args=None, kwargs=None):
         super().__init__(interval, function, args, kwargs)
         self.start_time = time.time()

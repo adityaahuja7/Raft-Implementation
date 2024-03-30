@@ -54,14 +54,16 @@ class RequestVoteRequest(_message.Message):
     def __init__(self, term: _Optional[int] = ..., candidateId: _Optional[int] = ..., lastLogIndex: _Optional[int] = ..., lastLogTerm: _Optional[int] = ...) -> None: ...
 
 class RequestVoteResponse(_message.Message):
-    __slots__ = ("term", "voteGranted", "nodeId")
+    __slots__ = ("term", "voteGranted", "nodeId", "remainingLease")
     TERM_FIELD_NUMBER: _ClassVar[int]
     VOTEGRANTED_FIELD_NUMBER: _ClassVar[int]
     NODEID_FIELD_NUMBER: _ClassVar[int]
+    REMAININGLEASE_FIELD_NUMBER: _ClassVar[int]
     term: int
     voteGranted: int
     nodeId: int
-    def __init__(self, term: _Optional[int] = ..., voteGranted: _Optional[int] = ..., nodeId: _Optional[int] = ...) -> None: ...
+    remainingLease: float
+    def __init__(self, term: _Optional[int] = ..., voteGranted: _Optional[int] = ..., nodeId: _Optional[int] = ..., remainingLease: _Optional[float] = ...) -> None: ...
 
 class ServeClientArgs(_message.Message):
     __slots__ = ("Request",)
