@@ -144,7 +144,7 @@ class Node:
         self.node_id = node_id
         self.current_term = 0
         self.voted_for = None
-        self.max_lease_duration = 3  # system
+        self.max_lease_duration = 8  # system
         self.lease_duration = 0  # mine
         self.lease_timer_alive = False  # mine
         self.lease_timer = None
@@ -162,8 +162,10 @@ class Node:
         self.election_timer_alive = False
         if not os.path.exists("./logs/"):
                 os.mkdir("./logs/")
-                open("./logs/" + "log_" + str(self.node_id) + ".txt", "w").close()
         self.log_file_path = "./logs/" + "log_" + str(self.node_id) + ".txt"
+        if not os.path.exists(self.log_file_path):
+            open("./logs/" + "log_" + str(self.node_id) + ".txt", "w").close()
+
         self.log = Log(self.log_file_path)
         if self.log.get_length()>0:
             print("➡️  NODE RESTARTED...")
@@ -245,29 +247,25 @@ class Node:
         )
         self.lease_timer.daemon=True
         self.lease_timer.start()
-        print("⏰ Lease started...")
+        # print("⏰ Lease started...")
 
     def renew_lease(self, renew_time):
-        lease_lock.acquire()
         if self.lease_timer_alive:
             self.stop_lease()
         self.lease_timer_alive = True
-        lease_lock.release()
         self.lease_timer = custom_timer.LeaseTimer(
             renew_time, self.handle_lease_timeout
         )
         self.lease_timer.start()
-        print("⏰ Lease renewed...")
+        # print("⏰ Lease renewed...")
 
     def toggle_has_lease(self):
         self.has_lease = True
 
     def stop_lease(self):
         self.lease_timer.cancel()
-        lease_lock.acquire()
         self.lease_timer_alive = False
-        lease_lock.release()
-        print("⏰ Lease stopped...")
+        # print("⏰ Lease stopped...")
 
     def handle_lease_timeout(self):
         print("⏰ Lease timeout triggered...")
@@ -415,7 +413,12 @@ class Node:
             print(f"✅ Log replicated to Node-{followerId}")
         except:
             print("❌ Error sending request to port:", str(ALL_PORTS[followerId]))
-            return
+            response = raft_pb2.AppendEntryResponse()
+            response.term=self.current_term
+            response.success=False
+            response.nodeId=self.node_id
+            response.ack=0
+            return response
 
         self.recieve_log_ack(
             response.nodeId, response.term, response.ack, response.success
@@ -479,6 +482,7 @@ class Node:
                     )
 
             elif message.Request.split()[0] == "SET":
+                print("GOT MESSAGE SET",self.has_lease)
                 if not self.has_lease:
                     user_response.Success = False
                     user_response.Data = "Leader does not have lease!."
@@ -494,29 +498,30 @@ class Node:
                         user_response.Data = (
                             str(message.Request) + " successfully committed."
                         )
+            print("💋Returning Response...",user_response)
             return user_response
         
         else:
             print("📝  Recieved client request...")
             print("⏩ Redirecting to Leader-", self.current_leader)
-            # try:
-            channel = grpc.insecure_channel(
-                "localhost:" + str(ALL_PORTS[self.current_leader])
-            )
-            stub = raft_pb2_grpc.raft_serviceStub(channel)
-            response = stub.serveClient(message)
-            print("📝  Response from Leader-", self.current_leader, ":", response)
-            return response
-            # except:
-            print("❌ Error forwarding request to leader port:", str(ALL_PORTS[self.current_leader]))
+            try:
+                channel = grpc.insecure_channel(
+                    "localhost:" + str(ALL_PORTS[self.current_leader])
+                )
+                stub = raft_pb2_grpc.raft_serviceStub(channel)
+                response = stub.serveClient(message)
+                print("📝  Response from Leader-", self.current_leader, ":", response)
+                return response
+            except:
+                print("❌ Error forwarding request to leader port:", str(ALL_PORTS[self.current_leader]))
 
     def heartbeat(self):
         if self.current_role == "Leader":
             responses = []
             for follower_id in OTHER_IDS:
-                _ = self.replicate_log(self.node_id, follower_id)
-                if _:
-                    responses.append(_)
+                response = self.replicate_log(self.node_id, follower_id)
+                if response:
+                    responses.append(response)
 
             count_success = 0
             for response in responses:
