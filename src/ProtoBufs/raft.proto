@@ -42,7 +42,7 @@ message RequestVoteResponse {
     int32 term = 1;
     int32 voteGranted = 2;
     int32 nodeId = 3;
-    float remainingLease = 4;
+    float leaseDuration = 4;
 }
 
 message ServeClientArgs {
