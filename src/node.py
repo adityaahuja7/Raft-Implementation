@@ -83,7 +83,7 @@ class Log:
         return self.entries
 
     def get_entry_by_key(self, key):
-        value = "NOT_FOUND"
+        value = ""
         for entry in self.entries:
             if entry[0].split()[0] == "SET" and entry[0].split()[1] == key:
                 value = entry[0].split()[2]
@@ -159,15 +159,15 @@ class Node:
         self.election_timer = threading.Timer(
             self.election_timeout, self.handle_election_timeout
         )
+        if not os.path.exists("./logs_node_" + str(self.node_id)):
+            os.mkdir("./logs_node_" + str(self.node_id))
+        self.log_file_path = "./logs_node_" + str(self.node_id) + "/logs.txt"
         self.election_timer_alive = False
-        if not os.path.exists("./logs/"):
-                os.mkdir("./logs/")
-        self.log_file_path = "./logs/" + "log_" + str(self.node_id) + ".txt"
         if not os.path.exists(self.log_file_path):
-            open("./logs/" + "log_" + str(self.node_id) + ".txt", "w").close()
+            open(self.log_file_path, "w").close()
 
         self.log = Log(self.log_file_path)
-        if self.log.get_length()>0:
+        if self.log.get_length() > 0:
             print("➡️  NODE RESTARTED...")
             self.current_term = self.log.get_last_entry()[1]
         else:
@@ -196,7 +196,7 @@ class Node:
                 ):
                     self.start_election_timeout()
             elif self.current_role == "Leader":
-                self.heartbeat()  # CHANGE THIS TO ACCOMODATE LEADER LEASE
+                self.heartbeat()
                 time.sleep(1)
 
     def start_server(self):
@@ -239,16 +239,6 @@ class Node:
         self.current_role = "Candidate"
         lock.release()
 
-    def start_lease(self):
-        self.lease_timer_alive = True
-        self.log.add_entry("NO-OP", self.current_term)
-        self.lease_timer = custom_timer.LeaseTimer(
-            self.max_lease_duration, self.handle_lease_timeout
-        )
-        self.lease_timer.daemon=True
-        self.lease_timer.start()
-        # print("⏰ Lease started...")
-
     def renew_lease(self, renew_time):
         if self.lease_timer_alive:
             self.stop_lease()
@@ -265,7 +255,6 @@ class Node:
     def stop_lease(self):
         self.lease_timer.cancel()
         self.lease_timer_alive = False
-        # print("⏰ Lease stopped...")
 
     def handle_lease_timeout(self):
         print("⏰ Lease timeout triggered...")
@@ -335,7 +324,10 @@ class Node:
                 stub = raft_pb2_grpc.raft_serviceStub(channel)
                 response = stub.requestVote(request_vote_request)
                 responses[response.nodeId] = response
-                if (self.lease_timer and response.leaseDuration > self.lease_timer.time_left()):
+                if (
+                    self.lease_timer
+                    and response.leaseDuration > self.lease_timer.time_left()
+                ):
                     self.lease_duration = response.leaseDuration
                     self.renew_lease(self.lease_duration)
                 print("❎ Response recieved from Node-", response.nodeId)
@@ -351,7 +343,11 @@ class Node:
         responder_id = response.nodeId
         responder_term = response.term
         responder_vote_granted = response.voteGranted
-        if (self.current_role == "Candidate" and responder_term == self.current_term and responder_vote_granted):
+        if (
+            self.current_role == "Candidate"
+            and responder_term == self.current_term
+            and responder_vote_granted
+        ):
             self.votes_recieved.add(responder_id)
             if len(self.votes_recieved) > len(ALL_PORTS) / 2:
 
@@ -359,6 +355,7 @@ class Node:
                 self.current_leader = self.node_id
                 self.stop_election_timeout()
                 threading.Timer(self.lease_duration, self.toggle_has_lease).start()
+                self.log.add_entry(self.current_term, "NO-OP")
                 print("🎉 Leader elected:", self.current_leader)
 
                 for ID in OTHER_IDS:
@@ -414,10 +411,10 @@ class Node:
         except:
             print("❌ Error sending request to port:", str(ALL_PORTS[followerId]))
             response = raft_pb2.AppendEntryResponse()
-            response.term=self.current_term
-            response.success=False
-            response.nodeId=self.node_id
-            response.ack=0
+            response.term = self.current_term
+            response.success = False
+            response.nodeId = self.node_id
+            response.ack = 0
             return response
 
         self.recieve_log_ack(
@@ -482,13 +479,13 @@ class Node:
                     )
 
             elif message.Request.split()[0] == "SET":
-                print("GOT MESSAGE SET",self.has_lease)
+                print("GOT MESSAGE SET", self.has_lease)
                 if not self.has_lease:
                     user_response.Success = False
                     user_response.Data = "Leader does not have lease!."
                 else:
                     count_success = 0
-                    self.log.add_entry(term=self.current_term,command=message.Request)
+                    self.log.add_entry(term=self.current_term, command=message.Request)
                     for follower_id in OTHER_IDS:
                         response = self.replicate_log(self.node_id, follower_id)
                         if response.success:
@@ -498,9 +495,9 @@ class Node:
                         user_response.Data = (
                             str(message.Request) + " successfully committed."
                         )
-            print("💋Returning Response...",user_response)
+            print("✉️  Returning response to user", user_response)
             return user_response
-        
+
         else:
             print("📝  Recieved client request...")
             print("⏩ Redirecting to Leader-", self.current_leader)
@@ -513,7 +510,10 @@ class Node:
                 print("📝  Response from Leader-", self.current_leader, ":", response)
                 return response
             except:
-                print("❌ Error forwarding request to leader port:", str(ALL_PORTS[self.current_leader]))
+                print(
+                    "❌ Error forwarding request to leader port:",
+                    str(ALL_PORTS[self.current_leader]),
+                )
 
     def heartbeat(self):
         if self.current_role == "Leader":

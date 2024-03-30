@@ -8,8 +8,8 @@ ALL_PORTS = [4040, 4041, 4042, 4043]
 
 
 if __name__ == "__main__":
-    leader_id = int(input("ENTER SERVER TO CONNECT TO"))
     print("👋 Welcome to the Raft Consensus Algorithm Menu!")
+    leader_id = 0
     while True:
         command = input("Please enter a command (GET/SET):")
         if command == "GET":
@@ -36,7 +36,6 @@ if __name__ == "__main__":
             else:
                 print("❌ Error: Request could not be processed by server.")
         except Exception as e:
-            print(e)
             print("❌ Error: Could not connect to the server. Please try again.")
-            leader_id = int(input("ENTER NEW SERVER TO CONNECT TO"))
+            leader_id = (leader_id + 1) % 4
         
