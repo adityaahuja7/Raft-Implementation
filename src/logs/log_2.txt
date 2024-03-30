@@ -1,4 +1,0 @@
-SET Aditya Poggi 2
-GET Aditya 6
-SET Hijda Sexo 6
-GET Hijda 6

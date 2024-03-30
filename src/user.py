@@ -35,7 +35,8 @@ if __name__ == "__main__":
                 leader_id = int(response.LeaderID)
             else:
                 print("❌ Error: Request could not be processed by server.")
-        except:
+        except Exception as e:
+            print(e)
             print("❌ Error: Could not connect to the server. Please try again.")
             leader_id = (leader_id+1)%4
         
