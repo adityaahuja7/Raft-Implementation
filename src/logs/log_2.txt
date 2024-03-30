@@ -1,0 +1,3 @@
+SET bro ski 1
+SET poggi ahuja 5
+SET poggi pagal 7

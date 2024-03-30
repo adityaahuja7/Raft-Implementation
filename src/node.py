@@ -83,7 +83,7 @@ class Log:
         return self.entries
 
     def get_entry_by_key(self, key):
-        value = None
+        value = "NOT_FOUND"
         for entry in self.entries:
             if entry[0].split()[0] == "SET" and entry[0].split()[1] == key:
                 value = entry[0].split()[2]
@@ -160,21 +160,17 @@ class Node:
             self.election_timeout, self.handle_election_timeout
         )
         self.election_timer_alive = False
-        if os.path.exists("./logs/" + "log_" + str(self.node_id) + ".txt"):
+        if not os.path.exists("./logs/"):
+                os.mkdir("./logs/")
+                open("./logs/" + "log_" + str(self.node_id) + ".txt", "w").close()
+        self.log_file_path = "./logs/" + "log_" + str(self.node_id) + ".txt"
+        self.log = Log(self.log_file_path)
+        if self.log.get_length()>0:
             print("➡️  NODE RESTARTED...")
-            self.log_file_path = "./logs/" + "log_" + str(self.node_id) + ".txt"
-            self.log = Log(self.log_file_path)
             self.current_term = self.log.get_last_entry()[1]
         else:
             print("➡️  NODE INITIALIZED...")
-            if not os.path.exists("./logs/"):
-                os.mkdir("./logs/")
-            open("./logs/" + "log_" + str(self.node_id) + ".txt", "w").close()
-            self.log_file_path = "./logs/" + "log_" + str(self.node_id) + ".txt"
-            self.log = Log(self.log_file_path)
-
         print("📒  Current Log:", self.log.get_entries())
-
         print("⏰ Election timeout set to:", self.election_timeout)
         server_thread = threading.Thread(target=self.start_server)
         server_thread.daemon = True
@@ -247,25 +243,30 @@ class Node:
         self.lease_timer = custom_timer.LeaseTimer(
             self.max_lease_duration, self.handle_lease_timeout
         )
+        self.lease_timer.daemon=True
         self.lease_timer.start()
         print("⏰ Lease started...")
 
     def renew_lease(self, renew_time):
+        lease_lock.acquire()
         if self.lease_timer_alive:
             self.stop_lease()
         self.lease_timer_alive = True
+        lease_lock.release()
         self.lease_timer = custom_timer.LeaseTimer(
             renew_time, self.handle_lease_timeout
         )
         self.lease_timer.start()
-        print("⏰ Lease started...")
+        print("⏰ Lease renewed...")
 
     def toggle_has_lease(self):
         self.has_lease = True
 
     def stop_lease(self):
         self.lease_timer.cancel()
+        lease_lock.acquire()
         self.lease_timer_alive = False
+        lease_lock.release()
         print("⏰ Lease stopped...")
 
     def handle_lease_timeout(self):
@@ -331,20 +332,18 @@ class Node:
         responses = {}
         self.lease_duration = 0
         for ID in OTHER_IDS:
-            # try:
-            channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[ID]))
-            stub = raft_pb2_grpc.raft_serviceStub(channel)
-            response = stub.requestVote(request_vote_request)
-            responses[response.nodeId] = response
-            if (self.lease_timer and response.leaseDuration > self.lease_timer.time_left()):
-                self.lease_duration = response.leaseDuration
-                self.renew_lease(self.lease_duration)
-                
-
-            print("❎ Response recieved from Node-", response.nodeId)
-            self.handle_vote_reponse(response)
-        # except:
-        #     print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
+            try:
+                channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[ID]))
+                stub = raft_pb2_grpc.raft_serviceStub(channel)
+                response = stub.requestVote(request_vote_request)
+                responses[response.nodeId] = response
+                if (self.lease_timer and response.leaseDuration > self.lease_timer.time_left()):
+                    self.lease_duration = response.leaseDuration
+                    self.renew_lease(self.lease_duration)
+                print("❎ Response recieved from Node-", response.nodeId)
+                self.handle_vote_reponse(response)
+            except:
+                print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
 
         if self.current_role == "Candidate":
             self.start_election_timeout()
@@ -485,6 +484,7 @@ class Node:
                     user_response.Data = "Leader does not have lease!."
                 else:
                     count_success = 0
+                    self.log.add_entry(term=self.current_term,command=message.Request)
                     for follower_id in OTHER_IDS:
                         response = self.replicate_log(self.node_id, follower_id)
                         if response.success:
@@ -508,7 +508,7 @@ class Node:
             print("📝  Response from Leader-", self.current_leader, ":", response)
             return response
             # except:
-            #     print("❌ Error forwarding request to leader port:", str(ALL_PORTS[self.current_leader]))
+            print("❌ Error forwarding request to leader port:", str(ALL_PORTS[self.current_leader]))
 
     def heartbeat(self):
         if self.current_role == "Leader":
