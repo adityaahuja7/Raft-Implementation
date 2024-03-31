@@ -8,7 +8,7 @@ import raft_pb2_grpc
 import raft_pb2
 import time
 import custom_timer
-
+from metadata import metadump
 # |--------------------------------------|
 # | DEVELOPMENT VARIABLES                |
 # |--------------------------------------|
@@ -25,7 +25,7 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 ID = int(input("ENTER ID:"))
-ALL_PORTS = [4040, 4041, 4042, 4043]
+ALL_PORTS = [4040, 4041, 4042, 4043,4044]
 PORT = str(ALL_PORTS[ID])
 OTHER_IDS = [i for i in range(len(ALL_PORTS)) if i != ID]
 
@@ -107,7 +107,7 @@ class Log:
                 f.write(str(entry[0]) + " " + str(entry[1]) + "\n")
             f.close()
 
-    def dump_log(self,text):
+    def dump_text(self,text):
         with open(self.log_file_path, "a") as f:
             f.write(text + "\n")
             f.close()
@@ -181,11 +181,21 @@ class Node:
         if not os.path.exists(self.log_file_path):
             open(self.log_file_path, "w").close()
             open(self.dump_file_path, "w").close()
+        if not os.path.exists(self.metadata_file_path):
             open(self.metadata_file_path, "w").close()
+            self.metadata = metadump(self.metadata_file_path)
+            self.metadata.write_blank_metadata_file()
+            self.metadata.update_metadata("Term",self.current_term)
+            self.metadata.update_metadata("commitLength",self.commit_length)
 
         self.log = Log(self.log_file_path)
         self.dump = Log(self.dump_file_path)
-        self.metadata = Log(self.metadata_file_path)
+        self.metadata = metadump(self.metadata_file_path)
+        update_params=self.metadata.read_metadata()
+        self.current_term=int(update_params['Term'])
+        self.commit_length=int(update_params['commitLength'])
+        if update_params['NodeID']!="NA":
+            self.voted_for=int(update_params['NodeID'])
         if self.log.get_length() > 0:
             print("➡️  NODE RESTARTED...")
             self.current_term = self.log.get_last_entry()[1]
@@ -257,7 +267,7 @@ class Node:
     def handle_election_timeout(self):
         print("⏰ Election timeout triggered...")
         lock.acquire()
-        self.dump.dump_log(f"Node {self.node_id} election timer timed out, Starting election.")
+        self.dump.dump_text(f"Node {self.node_id} election timer timed out, Starting election.")
         self.election_timer_alive = False
         self.current_role = "Candidate"
         lock.release()
@@ -282,9 +292,10 @@ class Node:
     def handle_lease_timeout(self):
         print("⏰ Lease timeout triggered...")
         lease_lock.acquire()
-        self.dump.dump_log(f"Leader {self.node_id} lease renewal failed. Stepping Down.")
+        self.dump.dump_text(f"Leader {self.node_id} lease renewal failed. Stepping Down.")
+        if self.current_role=="Leader":
+            self.dump.dump_text(f"{self.node_id} Stepping Down")
         self.current_role = "Follower"
-        self.dump.dump_log(f"{self.node_id} Stepping Down")
         self.current_leader = None
         self.lease_duration = 0
         self.lease_timer_alive = False
@@ -298,8 +309,12 @@ class Node:
         cLogTerm = request.lastLogTerm
         if cTerm > self.current_term:
             self.current_term = cTerm
+            self.metadata.update_metadata("Term",self.current_term)
+            if self.current_role=="Leader":
+                self.dump.dump_text(f"{self.node_id} Stepping Down")
             self.current_role = "Follower"
             self.voted_for = None
+            self.metadata.update_metadata("NodeID","NA")
         self.last_term = 0
         if self.log.get_length() > 0:
             _, term = self.log.get_last_entry()
@@ -316,14 +331,15 @@ class Node:
             and (self.voted_for == CId or self.voted_for == None)
         ):
             print("❎  I VOTED FOR:", CId)
-            self.dump.dump_log(f"Vote granted for Node {CId} in term {cTerm}.")
+            self.dump.dump_text(f"Vote granted for Node {CId} in term {cTerm}.")
             self.voted_for = CId
+            self.metadata.update_metadata("NodeID",CId)
             response.voteGranted = True
             response.nodeId = self.node_id
             response.term = self.current_term
         else:
             print("❎ I DID NOT VOTE FOR:", CId)
-            self.dump.dump_log(f"Vote denied for Node {CId} in term {cTerm}.")
+            self.dump.dump_text(f"Vote denied for Node {CId} in term {cTerm}.")
             response.voteGranted = False
             response.nodeId = self.node_id
             response.term = self.current_term
@@ -333,9 +349,11 @@ class Node:
     def send_request_vote(self):
         print("🗳  Requesting votes...")
         request_vote_request = raft_pb2.RequestVoteRequest()
-        self.voted_for = self.node_id
+        self.voted_for = self.node_id 
+        self.metadata.update_metadata("NodeID",self.voted_for)
         self.votes_recieved.add(self.node_id)
         self.current_term = self.current_term + 1
+        self.metadata.update_metadata("Term",self.current_term)
         last_term = 0
         if self.log.get_length() > 0:
             last_term = self.log.get_last_entry()[1]
@@ -360,7 +378,7 @@ class Node:
                 print("❎ Response recieved from Node-", response.nodeId)
                 self.handle_vote_reponse(response)
             except:
-                self.dump.dump_log(f"Error occurred while sending RPC to Node {ID}.")
+                self.dump.dump_text(f"Error occurred while sending RPC to Node {ID}.")
                 print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
 
         if self.current_role == "Candidate":
@@ -382,10 +400,12 @@ class Node:
                 self.current_role = "Leader"
                 self.current_leader = self.node_id
                 if (not self.has_lease):
-                    self.dump.dump_log("New Leader waiting for Old Leader Lease to timeout.")
-                    self.dump.dump_log(f"Node {self.node_id} became the leader for term {self.current_term}.")
+                    self.dump.dump_text("New Leader waiting for Old Leader Lease to timeout.")
+                    self.dump.dump_text(f"Node {self.node_id} became the leader for term {self.current_term}.")
                 self.stop_election_timeout()
-                threading.Timer(self.lease_duration, self.toggle_has_lease).start()
+                check_thread=threading.Timer(self.lease_duration, self.toggle_has_lease)
+                check_thread.daemon=True
+                check_thread.start()
                 self.log.add_entry(self.current_term, "NO-OP")
                 print("🎉 Leader elected:", self.current_leader)
 
@@ -398,8 +418,10 @@ class Node:
                         print("❌ Error sending request to port:", ALL_PORTS[ID])
             elif responder_term > self.current_term:
                 self.current_term = responder_term
+                self.metadata.update_metadata("Term",self.current_term)
                 self.current_role = "Follower"
                 self.voted_for = None
+                self.metadata.update_metadata("NodeID","NA")
                 self.stop_election_timeout()
         else:
             pass
@@ -439,8 +461,8 @@ class Node:
             stub = raft_pb2_grpc.raft_serviceStub(channel)
             response = stub.appendEntry(append_entry_request)
             print(f"✅ Log replicated to Node-{followerId}")
-        except:
-            self.dump.dump_log(f"Error occurred while sending RPC to Node {followerId}.")
+        except Exception as e:
+            self.dump.dump_text(f"Error occurred while sending RPC to Node {followerId}.")
             print("❌ Error sending request to port:", str(ALL_PORTS[followerId]))
             response = raft_pb2.AppendEntryResponse()
             response.term = self.current_term
@@ -467,8 +489,11 @@ class Node:
                 self.replicate_log(self.node_id, follower)
         elif term > self.current_term:
             self.current_term = term
+            self.metadata.update_metadata("Term",self.current_term)
             self.current_role = "Follower"
+            self.dump.dump_text(f"{self.node_id} Stepping Down")
             self.voted_for = None
+            self.metadata.update_metadata("NodeID","NA")
             self.stop_election_timeout()
 
     def set_of_acks(self, length):
@@ -494,6 +519,7 @@ class Node:
             for i in range(self.commit_length, max(ready)):
                 print("STATE COMMITED:", self.log.get_entry(i)[0])
             self.commit_length = max(ready)
+            self.metadata.update_metadata("commitLength",self.commit_length)
 
         return
 
@@ -501,7 +527,7 @@ class Node:
         user_response = raft_pb2.ServeClientReply()
         user_response.LeaderID = str(self.current_leader)
         if self.current_role == "Leader":
-            self.dump.dump_log(f"Node {self.node_id} (leader) received an {message.Request} request.")
+            self.dump.dump_text(f"Node {self.node_id} (leader) received an {message.Request} request.")
             if message.Request.split()[0] == "GET":
                 if not self.has_lease:
                     user_response.Success = False
@@ -529,7 +555,7 @@ class Node:
                         user_response.Data = (
                             str(message.Request) + " successfully committed."
                         )
-                        self.dump_log(f"Node {self.node_id} (leader) received an {message.Request} request.")
+                        self.dump.dump_text(f"Node {self.node_id} (leader) received an {message.Request} request.")
                         
                     
 
@@ -555,7 +581,7 @@ class Node:
 
     def heartbeat(self):
         if self.current_role == "Leader":
-            self.dump.dump_log(f"Leader {self.node_id} sending heartbeat and Renewing Lease")
+            self.dump.dump_text(f"Leader {self.node_id} sending heartbeat and Renewing Lease")
             responses = []
             for follower_id in OTHER_IDS:
                 response = self.replicate_log(self.node_id, follower_id)
@@ -588,7 +614,9 @@ class Node:
         self.renew_lease(self.lease_duration)
         if term > self.current_term:
             self.current_term = term
+            self.metadata.update_metadata("Term",self.current_term)
             self.voted_for = None
+            self.metadata.update_metadata("NodeID","NA")
             self.stop_election_timeout()
 
         if term == self.current_term:
@@ -603,13 +631,13 @@ class Node:
         append_entry_response.nodeId = self.node_id
         append_entry_response.term = self.current_term
         if term == self.current_term and logOK:
-            self.dump.dump_log(f"Node {self.node_id} accepted AppendEntries RPC from {leader_id}.")
+            self.dump.dump_text(f"Node {self.node_id} accepted AppendEntries RPC from {leader_id}.")
             self.append_entries(prefixLen, leaderCommit, suffix)
             ack = prefixLen + len(suffix)
             append_entry_response.ack = ack
             append_entry_response.success = True
         else:
-            self.dump.dump_log(f"Node {self.node_id} rejected AppendEntries RPC from {leader_id}.")
+            self.dump.dump_text(f"Node {self.node_id} rejected AppendEntries RPC from {leader_id}.")
             append_entry_response.ack = 0
             append_entry_response.success = False
 
@@ -629,7 +657,9 @@ class Node:
         if leaderCommit > self.commit_length:
             for i in range(self.commit_length, leaderCommit):
                 print("COMMITTED", self.log.get_entry(i)[0])
+                self.dump.dump_text(f"Node {self.node_id} (follower) committed the entry {self.log.get_entry(i)[0]} to the state machine.")
             self.commit_length = leaderCommit
+            self.metadata.update_metadata("commitLength",self.commit_length)
         return
 
 
