@@ -107,6 +107,17 @@ class Log:
                 f.write(str(entry[0]) + " " + str(entry[1]) + "\n")
             f.close()
 
+    def dump_log(self,text):
+        with open(self.log_file_path, "a") as f:
+            f.write(text + "\n")
+            f.close()
+    
+    def rewrite_log(self,text):
+        with open(self.log_file_path, "w") as f:
+            f.write(text + "\n")
+            f.close()
+
+
 
 # |--------------------------------------|
 # | NODE CLASS                           |
@@ -120,16 +131,18 @@ class Node:
     # |--------------------------------------|
 
     def __init__(self):
-        self.node_id = None
-        self.current_term = None
-        self.max_lease_duration = None  # system
-        self.lease_duration = None  # mine
-        self.lease_timer_alive = None  # mine
+        self.node_id = None # meta
+        self.current_term = None # meta
+        self.max_lease_duration = None  
+        self.lease_duration = None 
+        self.lease_timer_alive = None  
         self.lease_timer = None
         self.has_lease = None
         self.voted_for = None
         self.log = None
-        self.commit_length = None
+        self.dump = None 
+        self.metadata = None
+        self.commit_length = None # meta
         self.current_role = None
         self.current_leader = None
         self.votes_recieved = None
@@ -141,12 +154,12 @@ class Node:
         self.last_term = None
 
     def initialize_node(self, node_id):
-        self.node_id = node_id
-        self.current_term = 0
+        self.node_id = node_id 
+        self.current_term = 0 
         self.voted_for = None
-        self.max_lease_duration = 8  # system
-        self.lease_duration = 0  # mine
-        self.lease_timer_alive = False  # mine
+        self.max_lease_duration = 8
+        self.lease_duration = 0  
+        self.lease_timer_alive = False  
         self.lease_timer = None
         self.has_lease = False
         self.commit_length = 0
@@ -162,11 +175,17 @@ class Node:
         if not os.path.exists("./logs_node_" + str(self.node_id)):
             os.mkdir("./logs_node_" + str(self.node_id))
         self.log_file_path = "./logs_node_" + str(self.node_id) + "/logs.txt"
+        self.dump_file_path = "./logs_node_" + str(self.node_id) + "/dump.txt"
+        self.metadata_file_path = "./logs_node_" + str(self.node_id) + "/metadata.txt"
         self.election_timer_alive = False
         if not os.path.exists(self.log_file_path):
             open(self.log_file_path, "w").close()
+            open(self.dump_file_path, "w").close()
+            open(self.metadata_file_path, "w").close()
 
         self.log = Log(self.log_file_path)
+        self.dump = Log(self.dump_file_path)
+        self.metadata = Log(self.metadata_file_path)
         if self.log.get_length() > 0:
             print("➡️  NODE RESTARTED...")
             self.current_term = self.log.get_last_entry()[1]
@@ -183,6 +202,9 @@ class Node:
     # | INITIALIZE CLIENT AND SERVER THREADS |
     # |--------------------------------------|
 
+    def update_metadata(self):
+        temp = f"Commit Length = {self.commit_length} | Current Term = {self.current_term} | Voter for = {self.voted_for}"
+        self.metadata.rewrite_log(temp)
     def start_client(self):
         while True:
             if self.current_role == "Candidate":
@@ -235,6 +257,7 @@ class Node:
     def handle_election_timeout(self):
         print("⏰ Election timeout triggered...")
         lock.acquire()
+        self.dump.dump_log(f"Node {self.node_id} election timer timed out, Starting election.")
         self.election_timer_alive = False
         self.current_role = "Candidate"
         lock.release()
@@ -259,7 +282,9 @@ class Node:
     def handle_lease_timeout(self):
         print("⏰ Lease timeout triggered...")
         lease_lock.acquire()
+        self.dump.dump_log(f"Leader {self.node_id} lease renewal failed. Stepping Down.")
         self.current_role = "Follower"
+        self.dump.dump_log(f"{self.node_id} Stepping Down")
         self.current_leader = None
         self.lease_duration = 0
         self.lease_timer_alive = False
@@ -291,12 +316,14 @@ class Node:
             and (self.voted_for == CId or self.voted_for == None)
         ):
             print("❎  I VOTED FOR:", CId)
+            self.dump.dump_log(f"Vote granted for Node {CId} in term {cTerm}.")
             self.voted_for = CId
             response.voteGranted = True
             response.nodeId = self.node_id
             response.term = self.current_term
         else:
             print("❎ I DID NOT VOTE FOR:", CId)
+            self.dump.dump_log(f"Vote denied for Node {CId} in term {cTerm}.")
             response.voteGranted = False
             response.nodeId = self.node_id
             response.term = self.current_term
@@ -333,6 +360,7 @@ class Node:
                 print("❎ Response recieved from Node-", response.nodeId)
                 self.handle_vote_reponse(response)
             except:
+                self.dump.dump_log(f"Error occurred while sending RPC to Node {ID}.")
                 print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
 
         if self.current_role == "Candidate":
@@ -353,6 +381,9 @@ class Node:
 
                 self.current_role = "Leader"
                 self.current_leader = self.node_id
+                if (not self.has_lease):
+                    self.dump.dump_log("New Leader waiting for Old Leader Lease to timeout.")
+                    self.dump.dump_log(f"Node {self.node_id} became the leader for term {self.current_term}.")
                 self.stop_election_timeout()
                 threading.Timer(self.lease_duration, self.toggle_has_lease).start()
                 self.log.add_entry(self.current_term, "NO-OP")
@@ -409,6 +440,7 @@ class Node:
             response = stub.appendEntry(append_entry_request)
             print(f"✅ Log replicated to Node-{followerId}")
         except:
+            self.dump.dump_log(f"Error occurred while sending RPC to Node {followerId}.")
             print("❌ Error sending request to port:", str(ALL_PORTS[followerId]))
             response = raft_pb2.AppendEntryResponse()
             response.term = self.current_term
@@ -462,12 +494,14 @@ class Node:
             for i in range(self.commit_length, max(ready)):
                 print("STATE COMMITED:", self.log.get_entry(i)[0])
             self.commit_length = max(ready)
+
         return
 
     def handle_broadcast_message(self, message):
         user_response = raft_pb2.ServeClientReply()
         user_response.LeaderID = str(self.current_leader)
         if self.current_role == "Leader":
+            self.dump.dump_log(f"Node {self.node_id} (leader) received an {message.Request} request.")
             if message.Request.split()[0] == "GET":
                 if not self.has_lease:
                     user_response.Success = False
@@ -495,6 +529,10 @@ class Node:
                         user_response.Data = (
                             str(message.Request) + " successfully committed."
                         )
+                        self.dump_log(f"Node {self.node_id} (leader) received an {message.Request} request.")
+                        
+                    
+
             print("✉️  Returning response to user", user_response)
             return user_response
 
@@ -517,6 +555,7 @@ class Node:
 
     def heartbeat(self):
         if self.current_role == "Leader":
+            self.dump.dump_log(f"Leader {self.node_id} sending heartbeat and Renewing Lease")
             responses = []
             for follower_id in OTHER_IDS:
                 response = self.replicate_log(self.node_id, follower_id)
@@ -564,11 +603,13 @@ class Node:
         append_entry_response.nodeId = self.node_id
         append_entry_response.term = self.current_term
         if term == self.current_term and logOK:
+            self.dump.dump_log(f"Node {self.node_id} accepted AppendEntries RPC from {leader_id}.")
             self.append_entries(prefixLen, leaderCommit, suffix)
             ack = prefixLen + len(suffix)
             append_entry_response.ack = ack
             append_entry_response.success = True
         else:
+            self.dump.dump_log(f"Node {self.node_id} rejected AppendEntries RPC from {leader_id}.")
             append_entry_response.ack = 0
             append_entry_response.success = False
 
