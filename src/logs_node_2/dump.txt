@@ -1,0 +1,117 @@
+Vote granted for Node 1 in term 1.
+Node 2 election timer timed out, Starting election.
+Node 2 rejected AppendEntries RPC from 1.
+Vote granted for Node 4 in term 3.
+Vote granted for Node 1 in term 4.
+Leader 2 lease renewal failed. Stepping Down.
+Node 2 rejected AppendEntries RPC from 1.
+Node 2 rejected AppendEntries RPC from 1.
+Vote granted for Node 3 in term 5.
+Vote granted for Node 4 in term 6.
+Leader 2 lease renewal failed. Stepping Down.
+Vote granted for Node 1 in term 7.
+Node 2 rejected AppendEntries RPC from 4.
+Vote granted for Node 4 in term 8.
+Node 2 election timer timed out, Starting election.
+Node 2 rejected AppendEntries RPC from 4.
+Vote granted for Node 4 in term 10.
+Leader 2 lease renewal failed. Stepping Down.
+Node 2 rejected AppendEntries RPC from 4.
+Node 2 rejected AppendEntries RPC from 4.
+Node 2 rejected AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 (follower) committed the entry NO-OP to the state machine.
+Node 2 (follower) committed the entry NO-OP to the state machine.
+Node 2 (follower) committed the entry NO-OP to the state machine.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 (follower) committed the entry SET a 1 to the state machine.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Node 2 accepted AppendEntries RPC from 4.
+Leader 2 lease renewal failed. Stepping Down.
+Node 2 election timer timed out, Starting election.
+Vote denied for Node 1 in term 11.
+Vote granted for Node 3 in term 13.
+Error occurred while sending RPC to Node 4.
+Node 2 rejected AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 (follower) committed the entry NO-OP to the state machine.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.
+Node 2 accepted AppendEntries RPC from 3.

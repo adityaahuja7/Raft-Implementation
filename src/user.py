@@ -4,7 +4,7 @@ import grpc
 import time 
 
 
-ALL_PORTS = [4040, 4041, 4042, 4043]
+ALL_PORTS = [4040, 4041, 4042, 4043, 4044]
 
 
 if __name__ == "__main__":
@@ -36,6 +36,7 @@ if __name__ == "__main__":
             else:
                 print("❌ Error: Request could not be processed by server.")
         except Exception as e:
+            print(e)
             print("❌ Error: Could not connect to the server. Please try again.")
             leader_id = (leader_id + 1) % 4
         

@@ -1,0 +1,138 @@
+Vote granted for Node 1 in term 1.
+Node 4 election timer timed out, Starting election.
+Node 4 rejected AppendEntries RPC from 1.
+Vote denied for Node 2 in term 2.
+Vote granted for Node 1 in term 4.
+Leader 4 lease renewal failed. Stepping Down.
+Node 4 rejected AppendEntries RPC from 1.
+Vote granted for Node 3 in term 5.
+Node 4 election timer timed out, Starting election.
+New Leader waiting for Old Leader Lease to timeout.
+Node 4 became the leader for term 6.
+4 Stepping Down
+Vote denied for Node 1 in term 7.
+Leader 4 lease renewal failed. Stepping Down.
+Node 4 election timer timed out, Starting election.
+New Leader waiting for Old Leader Lease to timeout.
+Node 4 became the leader for term 8.
+4 Stepping Down
+Vote denied for Node 2 in term 9.
+Node 4 election timer timed out, Starting election.
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Node 4 (leader) received an SET a 1 request.
+Leader 4 sending heartbeat and Renewing Lease
+Error occurred while sending RPC to Node 3.
+Node 4 (leader) received an SET a 1 request.
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Node 4 (leader) received an GET a request.
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Node 4 (leader) received an GET a request.
+Leader 4 sending heartbeat and Renewing Lease
+Node 4 (leader) received an GET a request.
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Node 4 rejected AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 (follower) committed the entry NO-OP to the state machine.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Node 4 accepted AppendEntries RPC from 3.
+Leader 4 lease renewal failed. Stepping Down.
+Vote granted for Node 3 in term 14.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 1.
+Error occurred while sending RPC to Node 2.
+Error occurred while sending RPC to Node 0.
+Vote granted for Node 3 in term 16.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 2.
+Error occurred while sending RPC to Node 0.
+Error occurred while sending RPC to Node 1.
+Vote granted for Node 3 in term 18.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 0.
+Error occurred while sending RPC to Node 2.
+Error occurred while sending RPC to Node 1.
+Vote granted for Node 3 in term 20.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 2.
+Error occurred while sending RPC to Node 0.
+Error occurred while sending RPC to Node 1.
+Vote granted for Node 3 in term 22.
+Node 4 election timer timed out, Starting election.
+Vote granted for Node 3 in term 24.
+Error occurred while sending RPC to Node 2.
+Error occurred while sending RPC to Node 1.
+Error occurred while sending RPC to Node 0.
+Node 4 election timer timed out, Starting election.
+Vote granted for Node 3 in term 26.
+Error occurred while sending RPC to Node 1.
+Error occurred while sending RPC to Node 2.
+Error occurred while sending RPC to Node 0.
