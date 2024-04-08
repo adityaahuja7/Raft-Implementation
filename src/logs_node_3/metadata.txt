@@ -1,7 +1,0 @@
-# Metadata File
-
-# Variable values
-commitLength = 5
-Term = 26
-NodeID = 3
-

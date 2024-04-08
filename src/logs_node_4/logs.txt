@@ -1,5 +1,0 @@
-NO-OP 6
-NO-OP 8
-NO-OP 10
-SET a 1 10
-NO-OP 13
