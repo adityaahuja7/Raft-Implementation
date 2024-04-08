@@ -233,6 +233,19 @@ class Node:
             elif self.current_role == "Leader":
                 self.heartbeat()
                 time.sleep(1)
+    def send_vote_response_concurently(self,id, channel, request_vote_request):
+        try:
+            stub = raft_pb2_grpc.raft_serviceStub(channel)
+            response = stub.requestVote(request_vote_request)
+            # responses[response.nodeId] = response
+            if self.lease_timer and response.leaseDuration > self.lease_timer.time_left():
+                self.lease_duration = response.leaseDuration
+                self.renew_lease(self.lease_duration)
+            print(f"✅ Response received from Node-{response.nodeId}")
+            self.handle_vote_reponse(response)
+        except Exception as e:
+            self.dump.dump_text(f"Error occurred while sending RPC to Node {id}.")
+            print(f"❌ Error sending request to port: {str(ALL_PORTS[id])}")
 
     def start_server(self):
         print("PID:", os.getpid())
@@ -366,24 +379,37 @@ class Node:
         request_vote_request.lastLogTerm = last_term
         responses = {}
         self.lease_duration = 0
-        for ID in OTHER_IDS:
+        # for ID in OTHER_IDS:
+        #     try:
+        #         channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[ID]))
+        #         stub = raft_pb2_grpc.raft_serviceStub(channel)
+        #         response = stub.requestVote(request_vote_request)
+        #         responses[response.nodeId] = response
+        #         if (
+        #             self.lease_timer
+        #             and response.leaseDuration > self.lease_timer.time_left()
+        #         ):
+        #             self.lease_duration = response.leaseDuration
+        #             self.renew_lease(self.lease_duration)
+        #         print("❎ Response recieved from Node-", response.nodeId)
+        #         self.handle_vote_reponse(response)
+        #     except:
+        #         self.dump.dump_text(f"Error occurred while sending RPC to Node {ID}.")
+        #         print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
+        threads = []
+        for id in OTHER_IDS:
             try:
-                channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[ID]))
-                stub = raft_pb2_grpc.raft_serviceStub(channel)
-                response = stub.requestVote(request_vote_request)
-                responses[response.nodeId] = response
-                if (
-                    self.lease_timer
-                    and response.leaseDuration > self.lease_timer.time_left()
-                ):
-                    self.lease_duration = response.leaseDuration
-                    self.renew_lease(self.lease_duration)
-                print("❎ Response recieved from Node-", response.nodeId)
-                self.handle_vote_reponse(response)
-            except:
-                self.dump.dump_text(f"Error occurred while sending RPC to Node {ID}.")
-                print("❌ Error sending request to port:", str(ALL_PORTS[ID]))
-
+                channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[id]))
+                thread = threading.Thread(target=self.send_vote_response_concurently, args=(id, channel, request_vote_request))
+                thread.start()
+                threads.append(thread)
+            except Exception as e:
+                print(e)
+                self.dump.dump_text(f"Error occurred while creating channel for Node {id}.")
+                print(f"❌ Error creating channel for port: {str(ALL_PORTS[id])}")
+        # Wait for Response before staring another thread
+        for thread in threads:
+            thread.join()
         if self.current_role == "Candidate":
             self.start_election_timeout()
 
