@@ -4,8 +4,7 @@ import grpc
 import time 
 
 
-ALL_IPS = ["10.190.0.15", "10.190.0.16", "10.190.0.17", "10.190.0.18", "10.190.0.19"]
-PORT = 4040
+ALL_PORTS = [4040, 4041, 4042, 4043, 4044]
 
 
 if __name__ == "__main__":
@@ -27,7 +26,7 @@ if __name__ == "__main__":
         message.Request = str(request_string)
         try:
             print("🚀 Sending request to node with ID-"+str(leader_id))
-            channel = grpc.insecure_channel(ALL_IPS[leader_id]+':'+str(PORT))
+            channel = grpc.insecure_channel('localhost:'+str(ALL_PORTS[leader_id]))
             stub = raft_pb2_grpc.raft_serviceStub(channel)
             response = stub.serveClient(message)
             if (response.Success):

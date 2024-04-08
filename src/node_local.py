@@ -26,9 +26,9 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 ID = int(input("ENTER ID:"))
-ALL_IPS = ["10.190.0.15", "10.190.0.16", "10.190.0.17", "10.190.0.18", "10.190.0.19"]
-PORT = 4040
-OTHER_IDS = [i for i in range(len(ALL_IPS)) if i != ID]
+ALL_PORTS = [4040, 4041, 4042, 4043, 4044]
+PORT = str(ALL_PORTS[ID])
+OTHER_IDS = [i for i in range(len(ALL_PORTS)) if i != ID]
 
 # |--------------------------------------|
 # | gRPC SERVICER CLASS                  |
@@ -251,7 +251,7 @@ class Node:
             self.handle_vote_reponse(response)
         except Exception as e:
             self.dump.dump_text(f"Error occurred while sending RPC to Node {id}.")
-            print(f"❌ Error sending request to id: {str(id)}")
+            print(f"❌ Error sending request to port: {str(ALL_PORTS[id])}")
 
     def start_server(self):
         print("PID:", os.getpid())
@@ -410,7 +410,7 @@ class Node:
         threads = []
         for id in OTHER_IDS:
             try:
-                channel = grpc.insecure_channel("[::]:" + str(PORT))
+                channel = grpc.insecure_channel("localhost:" + str(ALL_PORTS[id]))
                 thread = threading.Thread(
                     target=self.send_vote_response_concurently,
                     args=(id, channel, request_vote_request),
@@ -423,7 +423,7 @@ class Node:
                 self.dump.dump_text(
                     f"Error occurred while creating channel for Node {id}."
                 )
-                print(f"❌ Error creating channel for port: str(PORT)")
+                print(f"❌ Error creating channel for port: {str(ALL_PORTS[id])}")
         # Wait for Response before staring another thread
         for thread in threads:
             thread.join()
@@ -441,7 +441,7 @@ class Node:
             and responder_vote_granted
         ):
             self.votes_recieved.add(responder_id)
-            if len(self.votes_recieved) > len(ALL_IPS) / 2:
+            if len(self.votes_recieved) > len(ALL_PORTS) / 2:
 
                 self.current_role = "Leader"
                 self.current_leader = self.node_id
@@ -467,7 +467,7 @@ class Node:
                         self.acked_length[ID] = 0
                         self.replicate_log(self.current_leader, ID)
                     except:
-                        print("❌ Error sending request to address:", ALL_IPS[ID])
+                        print("❌ Error sending request to port:", ALL_PORTS[ID])
             elif responder_term > self.current_term:
                 self.current_term = responder_term
                 self.metadata.update_metadata("Term", self.current_term)
@@ -509,7 +509,7 @@ class Node:
         )
 
         try:
-            channel = grpc.insecure_channel(f"{ALL_IPS[followerId]}:{PORT}")
+            channel = grpc.insecure_channel(f"localhost:{ALL_PORTS[followerId]}")
             stub = raft_pb2_grpc.raft_serviceStub(channel)
             response = stub.appendEntry(append_entry_request)
             print(f"✅ Log replicated to Node-{followerId}")
@@ -517,7 +517,7 @@ class Node:
             self.dump.dump_text(
                 f"Error occurred while sending RPC to Node {followerId}."
             )
-            print("❌ Error sending request to address:", ALL_IPS[followerId])  
+            print("❌ Error sending request to port:", str(ALL_PORTS[followerId]))
             response = raft_pb2.AppendEntryResponse()
             response.term = self.current_term
             response.success = False
@@ -563,7 +563,7 @@ class Node:
 
     def commit_log_entries(self):
         # Function 9 out of 9
-        minacks = len(ALL_IPS) / 2
+        minacks = len(ALL_PORTS) / 2
         ready = []
         for i in range(1, self.log.get_length() + 1):
             if self.set_of_acks(i) >= minacks:
@@ -609,7 +609,7 @@ class Node:
                         response = self.replicate_log(self.node_id, follower_id)
                         if response.success:
                             count_success += 1
-                    if count_success >= len(ALL_IPS) // 2:
+                    if count_success >= len(ALL_PORTS) // 2:
                         user_response.Success = True
                         user_response.Data = (
                             str(message.Request) + " successfully committed."
@@ -626,7 +626,7 @@ class Node:
             print("⏩ Redirecting to Leader-", self.current_leader)
             try:
                 channel = grpc.insecure_channel(
-                    f"{ALL_IPS[self.current_leader]}:{PORT}"
+                    "localhost:" + str(ALL_PORTS[self.current_leader])
                 )
                 stub = raft_pb2_grpc.raft_serviceStub(channel)
                 response = stub.serveClient(message)
@@ -635,7 +635,7 @@ class Node:
             except:
                 print(
                     "❌ Error forwarding request to leader port:",
-                    str(ALL_IPS[self.current_leader])
+                    str(ALL_PORTS[self.current_leader]),
                 )
 
     def heartbeat(self):
@@ -667,7 +667,7 @@ class Node:
 
             print("♥ Successful Heartbeat Count:", count_success)
 
-            if count_success >= len(ALL_IPS) // 2:
+            if count_success >= len(ALL_PORTS) // 2:
                 self.renew_lease(self.max_lease_duration)
 
     # |--------------------------------------|
