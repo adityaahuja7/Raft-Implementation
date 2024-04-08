@@ -259,7 +259,7 @@ class Node:
         raft_pb2_grpc.add_raft_serviceServicer_to_server(
             raft_serviceServicer(self), server
         )
-        port = server.add_insecure_port("[::]:" + PORT)
+        port = server.add_insecure_port("[::]:" + str(PORT))
         error = server.start()
         if error:
             print("❌ Error starting server:", error)
@@ -467,7 +467,7 @@ class Node:
                         self.acked_length[ID] = 0
                         self.replicate_log(self.current_leader, ID)
                     except:
-                        print("❌ Error sending request to address:", ALL_IPS[ID])
+                        print("❌ Error sending request to port:", ALL_IPS[ID])
             elif responder_term > self.current_term:
                 self.current_term = responder_term
                 self.metadata.update_metadata("Term", self.current_term)
