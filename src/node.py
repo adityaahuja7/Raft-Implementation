@@ -107,10 +107,13 @@ class Log:
                 f.write(str(entry[0]) + " " + str(entry[1]) + "\n")
             f.close()
 
-    def dump_text(self,text):
+    def write_to_file(self,text):
         with open(self.log_file_path, "a") as f:
             f.write(text + "\n")
-            f.close()
+
+    def dump_text(self,text):
+        thread = threading.Thread(target=self.write_to_file,args=([text]))
+        thread.start()
     
     def rewrite_log(self,text):
         with open(self.log_file_path, "w") as f:

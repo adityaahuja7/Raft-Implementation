@@ -1,0 +1,125 @@
+Node 4 election timer timed out, Starting election.
+Vote denied for Node 2 in term 10.
+Node 4 rejected AppendEntries RPC from 0.
+Vote denied for Node 0 in term 11.
+Node 4 election timer timed out, Starting election.
+Leader 4 lease renewal failed. Stepping Down.
+Node 4 rejected AppendEntries RPC from 0.
+Node 4 rejected AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 (follower) committed the entry NO-OP to the state machine.
+Node 4 (follower) committed the entry NO-OP to the state machine.
+Vote denied for Node 0 in term 14.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Node 4 accepted AppendEntries RPC from 0.
+Leader 4 lease renewal failed. Stepping Down.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 0.
+Vote denied for Node 3 in term 15.
+Node 4 rejected AppendEntries RPC from 2.
+Vote denied for Node 1 in term 16.
+Vote denied for Node 2 in term 15.
+Error occurred while sending RPC to Node 0.
+Vote denied for Node 3 in term 17.
+New Leader waiting for Old Leader Lease to timeout.
+Node 4 became the leader for term 18.
+Error occurred while sending RPC to Node 0.
+4 Stepping Down
+4 Stepping Down
+Leader 4 lease renewal failed. Stepping Down.
+Vote denied for Node 2 in term 19.
+Vote denied for Node 3 in term 20.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 0.
+New Leader waiting for Old Leader Lease to timeout.
+Node 4 became the leader for term 21.
+Vote denied for Node 2 in term 21.
+Error occurred while sending RPC to Node 0.
+4 Stepping Down
+Vote denied for Node 3 in term 22.
+Node 4 election timer timed out, Starting election.
+Error occurred while sending RPC to Node 0.
+Vote denied for Node 3 in term 23.
+Error occurred while sending RPC to Node 0.
+Leader 4 sending heartbeat and Renewing Lease
+Error occurred while sending RPC to Node 0.
+Leader 4 sending heartbeat and Renewing Lease
+Error occurred while sending RPC to Node 0.
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease
+Leader 4 sending heartbeat and Renewing Lease

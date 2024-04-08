@@ -1,0 +1,8 @@
+# Metadata File
+
+# Variable values
+commitLength = 9
+Term = 23
+NodeID = NA
+
+
