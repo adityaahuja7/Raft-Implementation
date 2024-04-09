@@ -26,7 +26,7 @@ def signal_handler(signal, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 ID = int(input("ENTER ID:"))
-ALL_IPS = ["34.131.72.203", "34.131.225.98", "34.131.167.226", "10.190.0.18", "10.190.0.19"]
+ALL_IPS = ["10.190.0.15", "10.190.0.16", "10.190.0.17", "10.190.0.18", "10.190.0.19"]
 PORT = 50051
 OTHER_IDS = [i for i in range(len(ALL_IPS)) if i != ID]
 
