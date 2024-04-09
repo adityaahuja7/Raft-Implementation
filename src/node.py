@@ -410,7 +410,7 @@ class Node:
         threads = []
         for id in OTHER_IDS:
             try:
-                channel = grpc.insecure_channel("[::]:" + str(PORT))
+                channel = grpc.insecure_channel(ALL_IPS[id]+ str(PORT))
                 thread = threading.Thread(
                     target=self.send_vote_response_concurently,
                     args=(id, channel, request_vote_request),
