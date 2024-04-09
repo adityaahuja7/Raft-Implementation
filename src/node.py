@@ -250,6 +250,7 @@ class Node:
             print(f"✅ Response received from Node-{response.nodeId}")
             self.handle_vote_reponse(response)
         except Exception as e:
+            print(e)
             self.dump.dump_text(f"Error occurred while sending RPC to Node {id}.")
             print(f"❌ Error sending request to id: {str(id)}")
 
@@ -466,7 +467,8 @@ class Node:
                         self.sent_length[ID] = self.log.get_length()
                         self.acked_length[ID] = 0
                         self.replicate_log(self.current_leader, ID)
-                    except:
+                    except Exception as e:
+                        print(e)
                         print("❌ Error sending request to port:", ALL_IPS[ID])
             elif responder_term > self.current_term:
                 self.current_term = responder_term
