@@ -260,7 +260,7 @@ class Node:
         raft_pb2_grpc.add_raft_serviceServicer_to_server(
             raft_serviceServicer(self), server
         )
-        port = server.add_insecure_port("[::]:" + str(PORT))
+        port = server.add_insecure_port(ALL_IPS[self.node_id]+":"+ str(PORT))
         error = server.start()
         if error:
             print("❌ Error starting server:", error)
